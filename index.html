@@ -155,7 +155,9 @@
     <div class="stats" id="stats"></div>
     <div class="legend">
       <span><i style="background:var(--ok)"></i>No delegation observed on every checked network</span>
+      <span><i style="background:var(--info)"></i>Verified familiar delegate</span>
       <span><i style="background:var(--warn)"></i>Delegated — inspect the delegate contract</span>
+      <span><i style="background:var(--bad)"></i>Verified reported malicious delegate</span>
       <span><i style="background:#9fb3c8"></i>Is a contract (not an EOA)</span>
       <span><i style="background:#c9a3a8"></i>RPC error</span>
     </div>
@@ -183,10 +185,12 @@
       <p>With EIP-7702, a normal wallet (EOA) can sign an authorization that points its account at a smart contract. After that, the contract's code runs whenever the wallet is called. On-chain, the wallet's code becomes <span class="mono">0xef0100</span> followed by the 20-byte address of that contract. This page reads each address's code with <span class="mono">eth_getCode</span> on every selected chain and decodes it.</p>
       <ul>
         <li><b>Each chain is separate.</b> A delegation on Base does not show up on Ethereum. Authorizations signed with chain ID 0 can be used on <i>every</i> chain, so check every network relevant to the account.</li>
+        <li><b>Verified familiar (purple):</b> the delegate address and its deployed code match a built-in fingerprint for that network. This is an identification aid, not a security audit.</li>
         <li><b>Delegated (amber):</b> inspect the delegate contract on that network. If you did not set it up yourself, treat the account as potentially controlled and avoid funding or interacting with it until independently verified.</li>
+        <li><b>Verified reported malicious (red):</b> the delegate address and code match a built-in fingerprint for a reported sweeper. Treat the account as potentially controlled; do not fund it or rely on its private key being safe.</li>
         <li><b>To remove a delegation,</b> sign a new 7702 authorization that points to <span class="mono">0x0000…0000</span>. In MetaMask: account menu → <i>Account details</i> → <i>Smart account</i> → <i>Switch back</i> (per network). If the key is compromised, removing the delegation does not make the wallet safe again.</li>
       </ul>
-      <p class="muted tiny">This page only reads public chain data and never asks you to sign. To perform a check, your browser sends each address to the selected RPC provider(s); those providers can associate requests with your IP address. Results are not a security audit, and an RPC error means the result is inconclusive for that network.</p>
+      <p class="muted tiny">This page only reads public chain data and never asks you to sign. To perform a check, your browser sends each address (and, when delegated, its delegate) to the selected RPC provider(s); those providers can associate requests with your IP address. Built-in labels require a matching chain-specific SHA-256 code fingerprint. Results are not a security audit, and an RPC error means the result is inconclusive for that network.</p>
     </details>
   </section>
 </div>
@@ -227,10 +231,21 @@ const DEFAULT_CHAINS = [
 ];
 
 /*
- * Deliberately do not assign trust labels based on a delegate address alone.
- * Contract addresses can hold different bytecode on different chains. A future
- * label feed must bind chain ID and an independently verified code hash.
+ * Labels are only used when both the chain ID and SHA-256 of the currently
+ * deployed delegate bytecode match. The Ethereum-mainnet fingerprints below
+ * are intentionally narrow; every other deployment remains unverified.
  */
+const VERIFIED_DELEGATES = {
+  1: {
+    '0x63c0c19a282a1b52b07dd5a65b58948a07dae32b': {name:'MetaMask Smart Account (EIP7702StatelessDeleGator)', kind:'good', sha256:'deb51590e22cdf9f70292f763d6d3aea8b078148aae082f3af1eca19bf0aa58c'},
+    '0x000000009b1d0af20d8c6d0a44e162d11f9b8f00': {name:'Uniswap Wallet – Calibur v1.0.0', kind:'good', sha256:'ec2f73e60cd9acf855d1b6b4dfa3f6b7209066ff4194b72af230834f69f5bbb9'},
+    '0x000000005c84f8fd50b21cac312528a64437030e': {name:'Uniswap Wallet – Calibur v1.1.0', kind:'good', sha256:'91d278eed4489e727fa971fa851c88cb28a62504d48c0e15b3c9af9df7fbbc74'},
+    '0xe6cae83bde06e4c305530e199d7217f42808555b': {name:'Simple7702Account v0.8 (eth-infinitism)', kind:'good', sha256:'e5cafd6d044419dd87f11e2797e1ef8c62d838ee13b3ebbb2499745998b32e74'},
+    '0x80296ff8d1ed46f8e3c7992664d13b833504c2bb': {name:'OKX Wallet Core', kind:'good', sha256:'b701151cec54963b3390a7ccf142347308600445cb97a3e17a60d4c45fbf9f77'},
+    '0xd6999651fc0964b9c6b444307a0ab20534a66560': {name:'thirdweb Minimal Account', kind:'good', sha256:'569a299921f74d0e9b60d943400a5c2da3871e4e870d7d40b6d3a52a0c3c2e8a'},
+    '0x930fcc37d6042c79211ee18a02857cb1fd7f0d0b': {name:'Reported phishing sweeper', kind:'bad', sha256:'10eaf1136d94f41a049eecb4bc03000891e65f2aab67fa645504cc499f273fa0'},
+  },
+};
 
 /* ---------------- Settings ---------------- */
 const LS_KEY = 'eip7702checker.v1';
@@ -260,6 +275,12 @@ function parseAddresses(text){
   return out;
 }
 const MAX_ADDRESSES = 100;
+async function sha256Hex(hex){
+  if (!globalThis.crypto?.subtle || !/^0x(?:[a-fA-F0-9]{2})*$/.test(hex)) return null;
+  const bytes = Uint8Array.from((hex.slice(2).match(/.{2}/g) || []).map(b => parseInt(b, 16)));
+  const digest = await crypto.subtle.digest('SHA-256', bytes);
+  return [...new Uint8Array(digest)].map(b => b.toString(16).padStart(2,'0')).join('');
+}
 function chunk(arr, n){ const o=[]; for(let i=0;i<arr.length;i+=n) o.push(arr.slice(i,i+n)); return o; }
 async function pool(items, limit, fn){ let i=0; const workers = Array.from({length:Math.min(limit,items.length)}, async ()=>{ while(i<items.length){ const idx=i++; await fn(items[idx], idx); } }); await Promise.all(workers); }
 
@@ -310,19 +331,27 @@ async function getCodes(chain, addrs, onResult){
         const res = await rpc(chain, payload);
         const byId = new Map(res.map(r=>[Number(r.id), r]));
         pending = [];
-        part.forEach((a,i)=>{ const r = byId.get(i+1); if (r && typeof r.result==='string') onResult(a, {code:r.result}); else pending.push(a); });
+        const resolved = [];
+        part.forEach((a,i)=>{ const r = byId.get(i+1); if (r && typeof r.result==='string') resolved.push([a,{code:r.result}]); else pending.push(a); });
+        await Promise.all(resolved.map(([a,result]) => onResult(a, result)));
       } catch { st.batchOk = false; }
     }
     await pool(pending, 4, async a => onResult(a, await getCodeSingle(chain, a)));
   }
 }
-function classify(res){
+async function classify(chain, res){
   if (!res) return {status:'loading'};
   if (res.error) return {status:'err', error:res.error};
   const code = (res.code || '0x').toLowerCase();
   if (code === '0x' || code === '0x0' || /^0x0*$/.test(code)) return {status:'clean', via:res.via};
   if (code.startsWith('0xef0100') && code.length === 48){
     const delegate = '0x' + code.slice(8);
+    const entry = VERIFIED_DELEGATES[chain.id]?.[delegate];
+    if (entry){
+      const target = await getCodeSingle(chain, delegate);
+      const hash = target.error ? null : await sha256Hex((target.code || '0x').toLowerCase());
+      if (hash === entry.sha256) return {status:entry.kind==='bad'?'bad':'known', delegate, label:entry.name, via:res.via};
+    }
     return {status:'deleg', delegate, label:'Unverified delegate contract', via:res.via};
   }
   return {status:'contract', size:(code.length-2)/2, via:res.via};
@@ -330,11 +359,12 @@ function classify(res){
 
 /* ---------------- Checking ---------------- */
 // result sets: key -> { addrs:[], data:{ addrLower: { chainId: classified } } }
-const sets = { wallet:{addrs:[], data:{}, stale:false}, paste:{addrs:[], data:{}, stale:false} };
+const sets = { wallet:{addrs:[], data:{}, stale:false, generation:0}, paste:{addrs:[], data:{}, stale:false, generation:0} };
 let progress = {done:0, total:0};
 
 async function runCheck(setKey, addrs, chains){
   const set = sets[setKey];
+  const generation = ++set.generation;
   if (addrs) { set.addrs = addrs; set.data = {}; }
   chains = chains || activeChains();
   if (!chains.length){ set.stale=true; scheduleRender(); return false; }
@@ -344,12 +374,14 @@ async function runCheck(setKey, addrs, chains){
   const total = jobs.reduce((s,j)=>s+j.list.length,0);
   if (setKey==='paste'){ progress={done:0,total}; showProgress(); }
   scheduleRender();
-  await Promise.all(jobs.map(j => getCodes(j.c, j.list, (a, res) => {
-    set.data[a.toLowerCase()][j.c.id] = classify(res);
+  await Promise.all(jobs.map(j => getCodes(j.c, j.list, async (a, res) => {
+    if (set.generation !== generation) return;
+    set.data[a.toLowerCase()][j.c.id] = await classify(j.c, res);
+    if (set.generation !== generation) return;
     if (setKey==='paste'){ progress.done++; showProgress(); }
     scheduleRender();
   })));
-  if (setKey==='paste') setTimeout(()=>{ $('#progress').style.display='none'; }, 500);
+  if (setKey==='paste' && set.generation===generation) setTimeout(()=>{ if (set.generation===generation) $('#progress').style.display='none'; }, 500);
   return true;
 }
 function showProgress(){ const p=$('#progress'); p.style.display = progress.total ? 'block':'none'; p.firstElementChild.style.width = (progress.total? (100*progress.done/progress.total):0) + '%'; }
@@ -363,21 +395,23 @@ const orderedEntries = row => DEFAULT_CHAINS.filter(c => row[c.id]).map(c => [St
 function summarize(row){
   const vals = orderedEntries(row);
   const by = s => vals.filter(([,v])=>v.status===s);
-  return { deleg:by('deleg'), clean:by('clean'), contract:by('contract'), err:by('err'), loading:by('loading'), total:vals.length };
+  return { bad:by('bad'), known:by('known'), deleg:by('deleg'), clean:by('clean'), contract:by('contract'), err:by('err'), loading:by('loading'), total:vals.length };
 }
 function headPill(s){
   if (!s.total) return `<span class="pill grey">Not checked</span>`;
   if (s.loading.length) return `<span class="pill grey">Checking… ${s.total-s.loading.length}/${s.total}</span>`;
-  const d = s.deleg.length;
+  if (s.bad.length) return `<span class="pill bad">⚠ Reported malicious delegation on ${s.bad.length} chain${s.bad.length>1?'s':''}</span>`;
+  const d = s.deleg.length + s.known.length;
   if (s.deleg.length) return `<span class="pill warn">Delegated on ${d} chain${d>1?'s':''}</span>`;
+  if (s.known.length) return `<span class="pill info">Delegated to familiar contract on ${d} chain${d>1?'s':''}</span>`;
   if (s.err.length) return `<span class="pill grey">Incomplete · ${s.err.length} network error${s.err.length>1?'s':''}</span>`;
-  if (s.contract.length && !s.clean.length) return `<span class="pill grey">Smart contract, not an EOA</span>`;
+  if (s.contract.length) return `<span class="pill grey">Smart contract on ${s.contract.length} chain${s.contract.length>1?'s':''}</span>`;
   return `<span class="pill ok">✓ No delegation observed</span>`;
 }
 function chipTitle(c, v){
   switch(v.status){
     case 'clean': return `${c.name}: no delegation observed` + (v.via?' (via wallet RPC)':'');
-    case 'deleg': return `${c.name}: delegated to ${v.delegate} – ${v.label}`;
+    case 'known': case 'deleg': case 'bad': return `${c.name}: delegated to ${v.delegate} – ${v.label}`;
     case 'contract': return `${c.name}: this address is a smart contract (${v.size} bytes of code)`;
     case 'err': return `${c.name}: ${v.error}`;
     default: return `${c.name}: checking…`;
@@ -385,10 +419,10 @@ function chipTitle(c, v){
 }
 function renderAddr(addr, row){
   const s = summarize(row);
-  const flag = s.deleg.length ? 'flag-deleg' : '';
+  const flag = s.bad.length ? 'flag-bad' : (s.deleg.length || s.known.length) ? 'flag-deleg' : '';
   const chips = orderedEntries(row).map(([id,v])=>{ const c=chainById(id); return `<span class="chip ${v.status}" title="${esc(chipTitle(c,v))}"><i></i>${esc(c.name)}</span>`; }).join('');
-  const dl = s.deleg.map(([id,v])=>{ const c=chainById(id);
-    const cls = 'warn';
+  const dl = [...s.bad, ...s.deleg, ...s.known].map(([id,v])=>{ const c=chainById(id);
+    const cls = v.status==='bad'?'bad':v.status==='known'?'info':'warn';
     return `<div class="deleg-item"><b>${esc(c.name)}</b>
       <span class="mono"><a href="${c.explorer}/address/${v.delegate}" target="_blank" rel="noopener">${v.delegate}</a></span>
       <span class="pill ${cls}">${esc(v.label)}</span></div>`; }).join('');
@@ -418,20 +452,22 @@ function renderPaste(){
   if (!set.addrs.length){ card.style.display='none'; return; }
   card.style.display='';
   if (set.stale){ $('#stats').innerHTML=''; $('#results').innerHTML='<div class="notice warn">Network settings changed. Results are stale; check the addresses again.</div>'; return; }
-  let nDeleg=0, nClean=0, nErr=0, nLoading=0;
+  let nDeleg=0, nBad=0, nClean=0, nErr=0, nLoading=0;
   const rows = set.addrs.map(a => { const r=set.data[a.toLowerCase()]||{}; const s=summarize(r);
     if (s.loading.length) nLoading++;
-    if (s.deleg.length) nDeleg++;
+    if (s.bad.length) nBad++;
+    if (s.bad.length||s.deleg.length||s.known.length) nDeleg++;
     else if (!s.loading.length && !s.err.length && !s.contract.length) nClean++;
     if (s.err.length) nErr++;
     return {a, r, s}; });
   $('#stats').innerHTML = `
     <div class="stat"><b>${set.addrs.length}</b><span>addresses</span></div>
     <div class="stat"><b style="color:var(--warn)">${nDeleg}</b><span>with a delegation</span></div>
+    <div class="stat"><b style="color:var(--bad)">${nBad}</b><span>reported malicious</span></div>
     <div class="stat"><b style="color:var(--ok)">${nClean}</b><span>no delegation observed</span></div>
     <div class="stat"><b>${nErr}</b><span>with RPC errors</span></div>`;
   const shown = rows.filter(({s}) => {
-    if (filter==='deleg') return s.deleg.length;
+    if (filter==='deleg') return s.bad.length||s.deleg.length||s.known.length;
     if (filter==='clean') return s.total>0 && s.clean.length===s.total;
     if (filter==='err') return s.err.length;
     return true; });
@@ -453,7 +489,7 @@ function updateConnectBtn(){
 function onAccounts(accs){
   wallet.accounts = (accs||[]).filter(a=>/^0x[a-fA-F0-9]{40}$/.test(a));
   updateConnectBtn();
-  if (!wallet.accounts.length){ sets.wallet={addrs:[],data:{},stale:false}; $('#walletBody').className='empty'; $('#walletBody').textContent='Wallet disconnected. Connect again to check it.'; return; }
+  if (!wallet.accounts.length){ sets.wallet={addrs:[],data:{},stale:false,generation:sets.wallet.generation+1}; $('#walletBody').className='empty'; $('#walletBody').textContent='Wallet disconnected. Connect again to check it.'; return; }
   if (!activeChains().length){ sets.wallet.stale=true; $('#netDetails').open=true; toast('Turn on at least one network'); scheduleRender(); return; }
   runCheck('wallet', wallet.accounts);
 }
@@ -519,6 +555,7 @@ function invalidateChecks(){
   if (sets.wallet.addrs.length) sets.wallet.stale=true;
   if (sets.paste.addrs.length) sets.paste.stale=true;
   scheduleRender();
+  if (wallet.accounts.length && activeChains().length) runCheck('wallet', wallet.accounts);
 }
 $('#nets').addEventListener('change', e => {
   const t = e.target;
@@ -534,7 +571,7 @@ $('#resetNets').onclick = () => { settings = {enabled:{}, rpcs:{}, testnets:fals
 
 /* ---------------- Events ---------------- */
 const input = $('#addrInput');
-function updateCount(){ const n = parseAddresses(input.value).length; const p=$('#foundCount'); p.textContent = `${n} address${n===1?'':'es'}`; p.className = 'pill ' + (n?'info':'grey'); }
+function updateCount(){ const n = parseAddresses(input.value).length; const p=$('#foundCount'); p.textContent = `${n} address${n===1?'':'es'} · max ${MAX_ADDRESSES}`; p.className = 'pill ' + (n?'info':'grey'); }
 input.addEventListener('input', updateCount);
 $('#checkBtn').onclick = async () => {
   const addrs = parseAddresses(input.value);
@@ -544,15 +581,19 @@ $('#checkBtn').onclick = async () => {
   const b=$('#checkBtn'); b.disabled=true; b.textContent='Checking…';
   try { await runCheck('paste', addrs); } finally { b.disabled=false; b.textContent='Check addresses'; }
 };
-$('#clearBtn').onclick = () => { input.value=''; updateCount(); sets.paste={addrs:[],data:{},stale:false}; renderPaste(); };
+$('#clearBtn').onclick = () => { input.value=''; updateCount(); sets.paste={addrs:[],data:{},stale:false,generation:sets.paste.generation+1}; renderPaste(); };
 $('#walletRecheck').onclick = () => { if (!activeChains().length){ toast('Turn on at least one network'); $('#netDetails').open=true; return; } if (wallet.accounts.length) runCheck('wallet', wallet.accounts); };
-$('#retryErr').onclick = () => { if (sets.paste.addrs.length) runCheck('paste'); if (sets.wallet.addrs.length) runCheck('wallet'); };
+$('#retryErr').onclick = () => {
+  if (!activeChains().length){ toast('Turn on at least one network'); $('#netDetails').open=true; return; }
+  if (sets.paste.addrs.length) runCheck('paste', sets.paste.stale ? sets.paste.addrs : undefined);
+  if (sets.wallet.addrs.length) runCheck('wallet', sets.wallet.stale ? wallet.accounts : undefined);
+};
 $('#filterSeg').onclick = e => { const f=e.target.dataset.f; if(!f) return; filter=f; [...$('#filterSeg').children].forEach(b=>b.classList.toggle('on', b.dataset.f===f)); renderPaste(); };
 $('#copyCsv').onclick = () => {
   const lines = ['address,chain,chain_id,status,delegate,label'];
   for (const a of sets.paste.addrs){ const row = sets.paste.data[a.toLowerCase()]||{};
     for (const [id,v] of orderedEntries(row)){ const c=chainById(id);
-      const status = {clean:'no_delegation_observed',deleg:'delegated_unverified',contract:'contract',err:'error',loading:'pending'}[v.status];
+      const status = {clean:'no_delegation_observed',known:'delegated_verified_familiar',deleg:'delegated_unverified',bad:'delegated_verified_reported_malicious',contract:'contract',err:'error',loading:'pending'}[v.status];
       lines.push([a, c.name, id, status, v.delegate||'', (v.label||v.error||'').replace(/,/g,';')].join(',')); } }
   copyText(lines.join('\n'));
 };
