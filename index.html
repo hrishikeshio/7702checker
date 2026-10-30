@@ -273,10 +273,10 @@
         <li><b>Each chain is separate.</b> A delegation on Base does not show up on Ethereum. Authorizations signed with chain ID 0 work on <i>every</i> chain, so check every network the account uses.</li>
         <li><b>Familiar contract (purple):</b> the delegate's address and its deployed code match a built-in fingerprint for that network, for example a MetaMask Smart Account. That identifies the contract. It is not a security audit, and it is only fine if you set it up yourself.</li>
         <li><b>Unverified contract (orange):</b> look the delegate up on the block explorer. If you did not set it up, treat the account as possibly controlled by someone else. Don't fund it or use it until you have checked.</li>
-        <li><b>Reported sweeper (red):</b> the delegate's code matches a reported sweeper. Treat the account as compromised. Don't send funds to it, and move anything left to a new wallet with a new seed phrase.</li>
+        <li><b>Reported sweeper (red):</b> the delegate's code matches a sweeper contract reported by a security team (Wintermute, DeFiHackLabs, Blockaid or Relay; each result links to its report). Copies with a different payout address are caught too. Treat the account as compromised. Don't send funds to it, and move anything left to a new wallet with a new seed phrase.</li>
         <li><b>To remove a delegation,</b> sign a new 7702 authorization that points to <span class="mono">0x0000…0000</span>. In MetaMask: account menu, then <i>Account details</i>, <i>Smart account</i>, <i>Switch back</i> (per network). If the key is compromised, removing the delegation does not make the wallet safe again.</li>
       </ul>
-      <p class="tiny muted">This page only reads public chain data and never asks you to sign. To run a check, your browser sends each address (and, when delegated, its delegate) to the selected RPC providers, who can link those requests to your IP address. Labels need a matching per-network SHA-256 fingerprint of the deployed code. Results are not a security audit, and an RPC error means that network's result is unknown.</p>
+      <p class="tiny muted">This page only reads public chain data and never asks you to sign. To run a check, your browser sends each address (and, when delegated, its delegate) to the selected RPC providers, who can link those requests to your IP address. Familiar labels need a matching per-network SHA-256 fingerprint of the deployed code. The sweeper list is short and hand-checked, so an orange result can still be malicious. Results are not a security audit, and an RPC error means that network's result is unknown.</p>
     </details>
   </section>
 
@@ -358,9 +358,42 @@ const FINGERPRINTS = {
   534352:  {cal10:SAME.cal10, s7702:SAME.s7702, okx:'cf86ca8d47670b4dd34e1c10aa412319880b0d87d88e2838355c948f516a1d16', tw:'9c41c753ee0d7d25f4f826bbb3c00e346f3cd64c499a2a3cdafc03cb806244ab'},
   7777777: {cal10:SAME.cal10, s7702:SAME.s7702, tw:'844973ae07b60f139774deb962849fea5cd0723f6fad9713db59ae5d1b491bca'},
 };
-const BAD_CODE = { // sha256(runtime bytecode) -> label, matched on any address/chain
-  '10eaf1136d94f41a049eecb4bc03000891e65f2aab67fa645504cc499f273fa0': 'Reported phishing sweeper (forwards incoming ETH to an attacker)',
-};
+/*
+ * Reported sweeper contracts. Each entry is matched two ways:
+ *  - exact: SHA-256 of the deployed bytecode
+ *  - skeleton: SHA-256 of the bytecode with every embedded 20-byte address (PUSH20)
+ *    zeroed and the Solidity metadata removed. This catches copies of the same
+ *    sweeper redeployed with a different payout or owner address.
+ * Matching works on any delegate address and any chain.
+ */
+const SWEEPERS = [
+  {name:'CrimeEnjoyor sweeper', by:'Wintermute', url:'https://www.coindesk.com/tech/2025/06/02/post-pectra-upgrade-malicious-ethereum-contracts-are-trying-to-drain-wallets-but-to-no-avail-wintermute',
+   exact:['d4faa33af534a455d7e10331e6e5d7148f9be1e994c75f00c6068880013f080a'], skel:['540929346a6f4cfb889f51778ead1175bc3ac726b52e396ec62d550be349b37d']},
+  {name:'CrimeEnjoyor2 sweeper', by:'Wintermute (Etherscan label)', url:'https://etherscan.io/address/0x6b7879a5d747e30a3adb37a9e41c046928fce933',
+   exact:['76d26274a54629ae9747ab65dc5ed97c6c072855f37f4ee33b10ca659de549ad'], skel:['e8f7742e0ffefdaef8deeb2d7f8a011d499eb9e340833ea850b3e9a70da37e81']},
+  {name:'AdvancedCrimeEnjoyor sweeper', by:'Wintermute (Etherscan label)', url:'https://etherscan.io/address/0xb6785b782571980b3ddb5d40659f4861ff15aa02',
+   exact:['57ada8b2b015847ea1cee60f9e93077f860c8b4c050334f0199c7cbe1c174c73'], skel:['5cf16824f5eb1bd8a032abdfd6e0a3d46f6ca89b8e606b9fa024e10c39151f26']},
+  {name:'AdvancedCrimeEnjoyor2 sweeper', by:'Wintermute (Etherscan label)', url:'https://etherscan.io/address/0x89046d34e70a65acab2152c26a0c8e493b5ba629',
+   exact:['6731c7f5f92b1424ecf8455287d7c092e5e0e8c5a47b52acc11e5cc4a353dc86','11a3c3835cd75fa4e0281598222155f660ea477b8f3a00ac040900146f6cfb91'],
+   skel:['df015662ec5c4ec36e4b2c996cb655cfc35783900d2b66bf3075cab332e2d7ec','0dc7c6783d8597cc0d9dd2bc8d4997be95b8e22d31cd4f8edb1265b1fb40030b']},
+  {name:'Phishing sweeper (forwards incoming ETH)', by:'DeFiHackLabs', url:'https://defihacklabs.substack.com/p/top-7702-delegator-revealed-as-phishing',
+   exact:['10eaf1136d94f41a049eecb4bc03000891e65f2aab67fa645504cc499f273fa0'], skel:['de1a6577a5eb87d9bb56a7dd9ddc6b8bfa13ff7eedaeee7178aa157d139fd816']},
+  {name:'Sweeper used in the October 2026 Binance hack', by:'Blockaid', url:'https://blockaid.io/blog/binance-55b-hack-using-advanced-ai-models-blockaid-detects-the-biggest-theft-in-crypto-history',
+   exact:['7235599d1e4088edcc48d2461f987475c3130897dea39c87ea1757603673bd56'], skel:['344da7dbf1b046cb5714070984889a776b5021fae77d2f4832a8929df1f696f3']},
+  {name:'Sweeper that forwards funds to a third-party wallet', by:'Relay', url:'https://support.relay.link/en/articles/12213430-malicious-eip-7702-delegations-and-how-to-stay-safe',
+   exact:['9290a8ed8536b2db7ba165c2d7470111cff4c76bcb154014159bb7992f2d832f'], skel:['40394be18bde9e011271c7e1cb7e988fde231e14af6404a50113580e6c35ecb4']},
+];
+function skeletonBytes(bytes){
+  let end = bytes.length;
+  if (end > 2){ const ml = (bytes[end-2] << 8) | bytes[end-1]; const s = end - 2 - ml; if (s > 0 && (bytes[s] === 0xa1 || bytes[s] === 0xa2)) end = s; }
+  const b = bytes.slice(0, end);
+  for (let i = 0; i < b.length; i++){ const op = b[i]; if (op >= 0x60 && op <= 0x7f){ if (op === 0x73) for (let j = 1; j <= 20 && i + j < b.length; j++) b[i + j] = 0; i += op - 0x5f; } }
+  return b;
+}
+function lookupSweeper(info){
+  if (!info) return null;
+  return SWEEPERS.find(w => w.exact.includes(info.hash) || (info.skel && w.skel.includes(info.skel))) || null;
+}
 function lookupFamiliar(chainId, delegate, hash){
   const fp = FINGERPRINTS[chainId]; if (!fp) return null;
   for (const [k, h] of Object.entries(fp)) if (DELEGATES[k].addr === delegate && h === hash) return DELEGATES[k];
@@ -397,9 +430,9 @@ function parseAddresses(text){
   return out;
 }
 const MAX_ADDRESSES = 100;
-async function sha256Hex(hex){
-  if (!globalThis.crypto?.subtle || !/^0x(?:[a-fA-F0-9]{2})*$/.test(hex)) return null;
-  const bytes = Uint8Array.from((hex.slice(2).match(/.{2}/g) || []).map(b => parseInt(b, 16)));
+const hexBytes = hex => /^0x(?:[a-fA-F0-9]{2})*$/.test(hex) ? Uint8Array.from((hex.slice(2).match(/.{2}/g) || []).map(b => parseInt(b, 16))) : null;
+async function sha256Bytes(bytes){
+  if (!globalThis.crypto?.subtle || !bytes) return null;
   const digest = await crypto.subtle.digest('SHA-256', bytes);
   return [...new Uint8Array(digest)].map(b => b.toString(16).padStart(2,'0')).join('');
 }
@@ -470,7 +503,8 @@ function delegateInfo(chain, delegate){
       const target = await getCodeSingle(chain, delegate);
       if (target.error) return null;
       const code = (target.code || '0x').toLowerCase();
-      return {empty: code === '0x', hash: await sha256Hex(code)};
+      const bytes = hexBytes(code);
+      return {empty: code === '0x', hash: await sha256Bytes(bytes), skel: bytes && bytes.length ? await sha256Bytes(skeletonBytes(bytes)) : null};
     })();
     delegateInfoCache.set(key, p);
     p.then(r => { if (!r) delegateInfoCache.delete(key); }); // retry failed lookups next time
@@ -485,7 +519,8 @@ async function classify(chain, res){
   if (code.startsWith('0xef0100') && code.length === 48){
     const delegate = '0x' + code.slice(8);
     const info = await delegateInfo(chain, delegate);
-    if (info && BAD_CODE[info.hash]) return {status:'bad', delegate, label:BAD_CODE[info.hash], via:res.via};
+    const sw = lookupSweeper(info);
+    if (sw) return {status:'bad', delegate, label:'Reported: ' + sw.name, by:sw.by, url:sw.url, via:res.via};
     const fam = info && lookupFamiliar(chain.id, delegate, info.hash);
     if (fam) return {status:'known', delegate, label:fam.name, via:res.via};
     return {status:'deleg', delegate, label:'Unverified delegate contract', empty: !!(info && info.empty), via:res.via};
@@ -636,7 +671,8 @@ function renderAddr(addr, row){
     const extra = v.status==='deleg' && v.empty ? ' (no code deployed there)' : '';
     return `<div class="deleg-item"><b>${esc(c.name)}</b>
       <span class="mono"><a href="${c.explorer}/address/${v.delegate}" target="_blank" rel="noopener">${v.delegate}</a></span>
-      <span class="sticker ${v.status}">${esc(v.label + extra)}</span></div>`; }).join('');
+      <span class="sticker ${v.status}">${esc(v.label + extra)}</span>
+      ${v.url ? `<span class="tiny" style="grid-column:2/-1">Source: <a href="${esc(v.url)}" target="_blank" rel="noopener">${esc(v.by)}</a></span>` : ''}</div>`; }).join('');
   const contracts = s.contract.length ? `<div class="note muted">Has normal contract code on ${s.contract.map(([id])=>esc(chainById(id).name)).join(', ')}. There it is a smart contract, not a wallet that can be delegated.</div>` : '';
   return `<div class="addr-card v-${st}">
     <div class="addr-head"><span class="row" style="gap:8px"><span class="addr">${esc(addr)}</span>
@@ -719,7 +755,7 @@ function detailText(st, s, addr, isWallet){
     case 'clean': return `${who} has <b>no EIP-7702 delegation</b> on any of the ${chainsLabel(s.clean.length)} checked.`;
     case 'known': return `${who} is delegated on ${list(s.known)}. That's a familiar contract. It's only fine if you set it up yourself.`;
     case 'deleg': return `${who} is delegated to an <b>unverified contract</b> on ${list(s.deleg)}${s.known.length ? '. Also familiar: ' + list(s.known) : ''}. If you didn't set this up, don't fund this account until you've checked the contract.`;
-    case 'bad': return `<b>${who} is delegated to a reported sweeper</b> on ${list(s.bad)}. Treat it as compromised: don't send funds, and move anything left to a new wallet with a new seed phrase.`;
+    case 'bad': { const v = s.bad[0][1]; return `<b>${who} is delegated to a reported sweeper</b> on ${list(s.bad)}. Treat it as compromised: don't send funds, and move anything left to a new wallet with a new seed phrase.${v.url ? ` Reported by <a href="${esc(v.url)}" target="_blank" rel="noopener">${esc(v.by)}</a>.` : ''}`; }
     case 'err': return `No delegation found so far, but ${plural(s.err.length, 'network')} returned an error (${s.err.map(([id])=>esc(chainById(id).name)).join(', ')}). Tap Retry errors.`;
     case 'contract': return `${who} has normal contract code on ${s.contract.map(([id])=>esc(chainById(id).name)).join(', ')}, so it's a smart contract there, not a wallet. No delegation found elsewhere.`;
     case 'none': return 'Turn on at least one network in the settings below.';
