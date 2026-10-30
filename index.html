@@ -3,173 +3,261 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>EIP-7702 Delegation Checker</title>
+<title>Did your wallet get 7702'd? · EIP-7702 delegation checker</title>
+<meta name="description" content="Check any wallet for EIP-7702 delegations on 16 EVM chains. Read-only, nothing to sign.">
+<meta property="og:title" content="Did your wallet get 7702'd?">
+<meta property="og:description" content="Check any wallet for EIP-7702 delegations on 16 EVM chains. Read-only, nothing to sign.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%A4%A8%3C/text%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,800&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
   :root{
-    --bg:#0b0d12; --panel:#12151c; --panel2:#171b24; --line:#232836; --text:#e7e9ee; --muted:#8b93a7;
-    --accent:#7c9cff; --accent2:#5a7cf0;
-    --ok:#3ecf8e; --okbg:rgba(62,207,142,.12);
-    --warn:#f5b84b; --warnbg:rgba(245,184,75,.13);
-    --bad:#ff5d6c; --badbg:rgba(255,93,108,.14);
-    --info:#a78bfa; --infobg:rgba(167,139,250,.13);
-    --grey:#5d6577; --greybg:rgba(139,147,167,.10);
-    --mono:'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,monospace;
+    --bg:#E7E1FF; --ink:#1A1446; --paper:#FFFFFF; --soft:#F6F3FF;
+    --yellow:#FFD84D; --mint:#22D39B; --sus:#FF8A1F; --rekt:#FF3355; --purple:#7C5CFF; --grey:#8C88A8;
+    --display:'Anton',Impact,'Arial Narrow Bold',sans-serif;
+    --body:'Bricolage Grotesque',system-ui,-apple-system,Segoe UI,sans-serif;
+    --mono:'IBM Plex Mono',ui-monospace,Menlo,monospace;
+    --shadow:5px 5px 0 var(--ink);
   }
   *{box-sizing:border-box}
-  html,body{margin:0;background:var(--bg);color:var(--text);font:15px/1.5 Inter,system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
-  a{color:var(--accent)}
-  .wrap{max-width:1040px;margin:0 auto;padding:20px 16px 60px}
-  header{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:18px}
-  .brand{display:flex;align-items:center;gap:10px}
-  .logo{width:34px;height:34px;border-radius:9px;background:linear-gradient(135deg,var(--accent),#b18cff);display:grid;place-items:center;font-weight:700;font-size:11px;color:#0b0d12}
-  h1{font-size:19px;margin:0;letter-spacing:-.01em}
-  .sub{color:var(--muted);font-size:13px;margin:0}
-  .card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:16px;margin-bottom:14px}
-  .card h2{font-size:15px;margin:0 0 10px;display:flex;align-items:center;gap:8px;justify-content:space-between;flex-wrap:wrap}
-  .row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
-  button{font:inherit;font-size:14px;font-weight:600;border:1px solid var(--line);background:var(--panel2);color:var(--text);padding:9px 14px;border-radius:10px;cursor:pointer;transition:.15s}
-  button:hover{border-color:#36405a}
-  button.primary{background:var(--accent2);border-color:var(--accent2);color:#fff}
-  button.primary:hover{background:var(--accent)}
-  button.small{padding:5px 10px;font-size:12.5px;border-radius:8px}
-  button.ghost{background:transparent}
-  button:disabled{opacity:.5;cursor:not-allowed}
-  textarea{width:100%;min-height:120px;resize:vertical;background:#0e1117;border:1px solid var(--line);border-radius:10px;color:var(--text);padding:12px;font:13px/1.55 var(--mono)}
-  textarea:focus,input:focus{outline:none;border-color:var(--accent2)}
-  input[type=text]{background:#0e1117;border:1px solid var(--line);border-radius:8px;color:var(--text);padding:7px 9px;font:12px var(--mono);width:100%}
-  .muted{color:var(--muted)} .tiny{font-size:12.5px}
+  html,body{margin:0}
+  body{background:var(--bg);color:var(--ink);font:16px/1.55 var(--body);
+    background-image:radial-gradient(rgba(26,20,70,.13) 1.2px,transparent 1.3px);background-size:18px 18px;}
+  a{color:var(--ink)}
+  ::selection{background:var(--yellow)}
+  :focus-visible{outline:3px solid var(--purple);outline-offset:2px}
+  .wrap{max-width:1120px;margin:0 auto;padding:18px 18px 70px}
+
+  /* header */
+  header{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:22px}
+  .logo{display:flex;align-items:center;gap:10px;font:24px/1 var(--display);letter-spacing:.01em;text-decoration:none}
+  .logo b{background:var(--yellow);border:3px solid var(--ink);border-radius:10px;padding:6px 8px 4px;box-shadow:3px 3px 0 var(--ink);transform:rotate(-4deg);display:inline-block}
+  .hdr-actions{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+
+  button,.btn{font:600 15px/1 var(--body);color:var(--ink);background:var(--paper);border:3px solid var(--ink);border-radius:12px;padding:11px 16px;cursor:pointer;box-shadow:3px 3px 0 var(--ink);transition:transform .08s, box-shadow .08s;text-decoration:none;display:inline-flex;align-items:center;gap:8px}
+  button:hover,.btn:hover{transform:translate(-1px,-1px);box-shadow:4px 4px 0 var(--ink)}
+  button:active,.btn:active{transform:translate(3px,3px);box-shadow:0 0 0 var(--ink)}
+  button:disabled{opacity:.55;cursor:not-allowed;transform:none;box-shadow:3px 3px 0 var(--ink)}
+  button.go{background:var(--yellow);font-size:17px;padding:14px 20px}
+  button.small,.btn.small{font-size:13px;padding:7px 11px;border-width:2px;box-shadow:2px 2px 0 var(--ink);border-radius:10px}
+  .wallet-dot{width:10px;height:10px;border-radius:50%;background:var(--mint);border:2px solid var(--ink)}
+
+  .toggle{display:inline-flex;align-items:center;gap:8px;font-weight:600;font-size:14px;cursor:pointer;user-select:none}
+  .toggle input[type=checkbox]{appearance:none;-webkit-appearance:none;width:46px;height:26px;border:3px solid var(--ink);border-radius:99px;background:var(--paper);position:relative;cursor:pointer;margin:0}
+  .toggle input[type=checkbox]::after{content:'';position:absolute;top:2px;left:2px;width:16px;height:16px;border-radius:50%;background:var(--ink);transition:left .15s}
+  .toggle input[type=checkbox]:checked{background:var(--yellow)}
+  .toggle input[type=checkbox]:checked::after{left:22px}
+
+  /* hero */
+  .hero{display:grid;grid-template-columns:minmax(0,1.05fr) minmax(0,.95fr);gap:30px;align-items:start}
+  h1{font:clamp(44px,6.6vw,86px)/.95 var(--display);margin:4px 0 14px;letter-spacing:.005em;text-transform:uppercase}
+  h1 .tilt{display:inline-block;margin-bottom:.12em;background:var(--paper);border:3px solid var(--ink);padding:0 .12em;box-shadow:var(--shadow);transform:rotate(-2deg);margin-top:.08em}
+  .lede{font-size:18px;max-width:34em;margin:0 0 20px}
+  .lede strong{background:linear-gradient(transparent 58%,var(--yellow) 58%)}
+
+  .panel{background:var(--paper);border:3px solid var(--ink);border-radius:18px;box-shadow:var(--shadow);padding:18px}
+  .panel h2{font:24px/1 var(--display);letter-spacing:.01em;margin:0 0 12px;display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
+  textarea{width:100%;min-height:118px;resize:vertical;border:3px solid var(--ink);border-radius:12px;background:var(--soft);color:var(--ink);padding:12px;font:13.5px/1.6 var(--mono)}
+  textarea:focus{outline:none;background:#fff;box-shadow:0 0 0 3px var(--purple)}
+  .row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+  .count{font:600 13px var(--body);background:var(--soft);border:2px solid var(--ink);border-radius:99px;padding:3px 10px}
+  .count.has{background:var(--yellow)}
+  .muted{color:#5b5780}.tiny{font-size:13px}
   .mono{font-family:var(--mono)}
-  .pill{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:600;padding:3px 9px;border-radius:999px;white-space:nowrap}
-  .pill.ok{background:var(--okbg);color:var(--ok)} .pill.warn{background:var(--warnbg);color:var(--warn)}
-  .pill.bad{background:var(--badbg);color:var(--bad)} .pill.info{background:var(--infobg);color:var(--info)}
-  .pill.grey{background:var(--greybg);color:var(--muted)}
-  .walletbtn .dot{width:8px;height:8px;border-radius:50%;background:var(--ok);display:inline-block;margin-right:6px}
-  .stats{display:flex;gap:8px;flex-wrap:wrap;margin:4px 0 12px}
-  .stat{background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:8px 12px;min-width:110px}
-  .stat b{display:block;font-size:18px}
-  .stat span{font-size:12px;color:var(--muted)}
-  .seg{display:inline-flex;border:1px solid var(--line);border-radius:10px;overflow:hidden}
-  .seg button{border:0;border-radius:0;background:transparent;padding:6px 11px;font-size:12.5px;color:var(--muted)}
-  .seg button.on{background:var(--panel2);color:var(--text)}
-  .res{background:var(--panel2);border:1px solid var(--line);border-radius:12px;padding:12px 12px 10px;margin-top:10px}
-  .res.flag-deleg{border-color:rgba(245,184,75,.35)}
-  .res.flag-bad{border-color:rgba(255,93,108,.5)}
-  .res-head{display:flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:space-between}
-  .addr{font:13px var(--mono);word-break:break-all}
+
+  /* meme card: the one loud thing */
+  .meme-wrap{position:sticky;top:14px}
+  .meme{position:relative;background:#000;border:3px solid var(--ink);border-radius:8px;box-shadow:8px 8px 0 var(--ink);aspect-ratio:1.12/1;display:flex;flex-direction:column;justify-content:space-between;align-items:center;padding:18px 16px;overflow:hidden;color:#fff;text-align:center}
+  .meme::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse at 50% 55%,var(--glow,#3a3470) 0%,transparent 62%);opacity:.75;transition:background .4s}
+  .meme[data-state=clean]{--glow:#0e7a58}
+  .meme[data-state=known]{--glow:#4b33b8}
+  .meme[data-state=deleg]{--glow:#9a4a00}
+  .meme[data-state=bad]{--glow:#a3001f}
+  .meme[data-state=err],.meme[data-state=contract]{--glow:#4d4a66}
+  .cap{position:relative;font:clamp(26px,3.6vw,44px)/1.02 var(--display);text-transform:uppercase;letter-spacing:.01em;
+    -webkit-text-stroke:2px #000;paint-order:stroke fill;text-shadow:3px 3px 0 #000,-2px -2px 0 #000,2px -2px 0 #000,-2px 2px 0 #000;max-width:100%;overflow-wrap:anywhere}
+  .meme .face{position:relative;font-size:clamp(84px,11vw,132px);line-height:1;filter:drop-shadow(0 6px 0 rgba(0,0,0,.5))}
+  .meme.loading .face{animation:bob 1s ease-in-out infinite}
+  .meme.loading .cap.bottom{animation:flicker 1.2s steps(2) infinite}
+  .meme.serious .cap{font:600 clamp(20px,2.4vw,27px)/1.25 var(--body);text-transform:none;-webkit-text-stroke:0;text-shadow:none}
+  .meme.serious .face{display:none}
+  .meme.serious{justify-content:center;gap:16px}
+  .meme .wm{position:absolute;right:10px;bottom:6px;font:11px var(--mono);opacity:.55}
+  .meme .bar{position:absolute;left:0;bottom:0;height:6px;background:var(--yellow);width:0;transition:width .25s}
+  .meme.stamp{animation:stamp .55s cubic-bezier(.2,1.6,.4,1) both}
+  .verdict-text{margin:14px 2px 10px;font-size:15.5px;min-height:3em}
+  .verdict-text b{font-weight:800}
+  .share{display:flex;gap:8px;flex-wrap:wrap}
+
+  @keyframes stamp{0%{transform:scale(1.35) rotate(-7deg);opacity:0}60%{transform:scale(.96) rotate(1deg);opacity:1}100%{transform:scale(1) rotate(0)}}
+  @keyframes bob{50%{transform:translateY(-10px) rotate(6deg)}}
+  @keyframes flicker{50%{opacity:.55}}
+  @keyframes shake{10%,90%{transform:translate(-2px,1px)}20%,80%{transform:translate(4px,-2px)}30%,50%,70%{transform:translate(-6px,2px)}40%,60%{transform:translate(6px,-1px)}}
+  @keyframes flash{from{opacity:.55}to{opacity:0}}
+  @keyframes fall{to{transform:translate3d(var(--dx),110vh,0) rotate(var(--rot));opacity:1}}
+  @keyframes wobble{25%{transform:rotate(-2.5deg)}75%{transform:rotate(2.5deg)}}
+  @keyframes shimmer{to{background-position:-200% 0}}
+  body.shake .wrap{animation:shake .5s both}
+  .flash{position:fixed;inset:0;background:var(--rekt);pointer-events:none;animation:flash .7s ease-out forwards;z-index:30}
+  .confetti{position:fixed;top:-20px;width:10px;height:14px;border:2px solid var(--ink);z-index:31;pointer-events:none;animation:fall var(--t) cubic-bezier(.3,.5,.6,1) var(--d) forwards}
+  .wobble{animation:wobble .4s ease-in-out 2}
+
+  /* wallet + results */
+  section{margin-top:26px}
+  .stats{display:flex;gap:10px;flex-wrap:wrap;margin:4px 0 14px}
+  .stat{border:2px solid var(--ink);border-radius:12px;padding:8px 12px;background:var(--soft);min-width:118px}
+  .stat b{display:block;font:30px/1 var(--display)}
+  .stat span{font-size:13px}
+  .stat.s-deleg{background:#FFE7D1}.stat.s-bad{background:#FFD9E0}.stat.s-clean{background:#D3F7EA}
+  .seg{display:inline-flex;border:2px solid var(--ink);border-radius:12px;overflow:hidden;background:var(--paper)}
+  .seg button{border:0;border-radius:0;box-shadow:none;font-size:13px;padding:8px 12px;background:transparent}
+  .seg button+button{border-left:2px solid var(--ink)}
+  .seg button.on{background:var(--ink);color:#fff}
+  .seg button:hover{transform:none;box-shadow:none}
+
+  .addr-card{border:2px solid var(--ink);border-radius:14px;padding:12px 14px;margin-top:12px;background:var(--paper)}
+  .addr-card.v-bad{background:#FFF0F3;border-color:var(--rekt);box-shadow:4px 4px 0 var(--rekt)}
+  .addr-card.v-deleg{background:#FFF6EC}
+  .addr-card.v-known{background:#F3F0FF}
+  .addr-head{display:flex;align-items:center;gap:10px;flex-wrap:wrap;justify-content:space-between}
+  .addr{font:13.5px var(--mono);word-break:break-all}
+  .sticker{display:inline-flex;align-items:center;gap:6px;font:600 13px/1.2 var(--body);border:2px solid var(--ink);border-radius:99px;padding:4px 11px;white-space:nowrap;background:var(--soft)}
+  .sticker.clean{background:var(--mint)}
+  .sticker.known{background:var(--purple);color:#fff}
+  .sticker.deleg{background:var(--sus)}
+  .sticker.bad{background:var(--rekt);color:#fff}
+  .sticker.err,.sticker.contract,.sticker.loading,.sticker.none{background:#E4E1F2}
   .chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
-  .chip{display:inline-flex;align-items:center;gap:6px;font-size:12px;padding:4px 9px;border-radius:8px;border:1px solid var(--line);background:#0f1218;color:var(--muted);cursor:default}
-  .chip i{width:7px;height:7px;border-radius:50%;background:var(--grey);display:inline-block;flex:none}
-  .chip.clean i{background:var(--ok)}
-  .chip.deleg{color:var(--warn);border-color:rgba(245,184,75,.35);background:var(--warnbg)} .chip.deleg i{background:var(--warn)}
-  .chip.known{color:var(--info);border-color:rgba(167,139,250,.35);background:var(--infobg)} .chip.known i{background:var(--info)}
-  .chip.bad{color:var(--bad);border-color:rgba(255,93,108,.45);background:var(--badbg)} .chip.bad i{background:var(--bad)}
-  .chip.contract{color:#9fb3c8} .chip.contract i{background:#9fb3c8}
-  .chip.err{color:#c9a3a8;border-style:dashed} .chip.err i{background:#c9a3a8}
-  .chip.loading i{animation:pulse 1s infinite ease-in-out}
-  @keyframes pulse{50%{opacity:.25}}
-  .deleg-list{margin-top:10px;border-top:1px solid var(--line);padding-top:8px;display:grid;gap:6px}
-  .deleg-item{display:grid;grid-template-columns:120px 1fr auto;gap:8px;align-items:center;font-size:13px}
+  .chip{display:inline-flex;align-items:center;gap:6px;font-size:12.5px;font-weight:600;padding:3px 10px 3px 7px;border-radius:99px;border:2px solid var(--ink);background:var(--paper)}
+  .chip i{width:9px;height:9px;border-radius:50%;border:1.5px solid var(--ink);background:#d9d6ea;flex:none}
+  .chip.clean i{background:var(--mint)}
+  .chip.known{background:#EEE9FF}.chip.known i{background:var(--purple)}
+  .chip.deleg{background:#FFE7D1}.chip.deleg i{background:var(--sus)}
+  .chip.bad{background:var(--rekt);color:#fff}.chip.bad i{background:#fff}
+  .chip.contract i{background:#8fb0c9}
+  .chip.err{border-style:dashed;color:#5b5780}.chip.err i{background:transparent}
+  .chip.loading{color:#8C88A8;background:linear-gradient(90deg,#fff 0%,#EDE9FF 50%,#fff 100%);background-size:200% 100%;animation:shimmer 1.1s linear infinite}
+  .deleg-list{margin-top:12px;display:grid;gap:8px}
+  .deleg-item{display:grid;grid-template-columns:130px minmax(0,1fr) auto;gap:10px;align-items:center;font-size:14px;border-top:2px dashed #cfcae6;padding-top:8px}
   .deleg-item .mono{font-size:12.5px;word-break:break-all}
-  .deleg-item .pill{white-space:normal;justify-self:start}
-  @media(max-width:620px){.deleg-item{grid-template-columns:1fr;gap:3px;padding-bottom:6px}
-    .stats{display:grid;grid-template-columns:repeat(3,1fr)}.stat{min-width:0;padding:7px 9px}.stat b{font-size:16px}.stat span{font-size:11px}}
-  details summary{cursor:pointer;font-weight:600;font-size:14px;list-style:none}
+  .deleg-item .sticker{white-space:normal;justify-self:start}
+  .note{font-size:13.5px;margin-top:8px}
+  .notice{border:2px solid var(--ink);border-radius:12px;padding:10px 13px;font-size:14px;margin-top:12px;background:#FFF6C9}
+  .notice.bad{background:#FFD9E0}
+  .empty{color:#5b5780;padding:6px 0}
+
+  details{background:var(--paper);border:3px solid var(--ink);border-radius:18px;box-shadow:var(--shadow);padding:16px 18px}
+  details+details{margin-top:18px}
+  details summary{cursor:pointer;font:22px/1.1 var(--display);letter-spacing:.01em;list-style:none;display:flex;justify-content:space-between;gap:10px}
   details summary::-webkit-details-marker{display:none}
-  details summary::before{content:'▸';display:inline-block;margin-right:8px;color:var(--muted);transition:.15s}
-  details[open] summary::before{transform:rotate(90deg)}
-  .nets{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:10px;margin-top:12px}
-  .net{border:1px solid var(--line);border-radius:10px;padding:10px;background:var(--panel2)}
-  .net label{display:flex;align-items:center;gap:8px;font-size:13.5px;font-weight:600;margin-bottom:6px}
-  .net .cid{color:var(--muted);font-weight:400;font-size:12px}
-  .notice{border-radius:10px;padding:10px 12px;font-size:13px;margin-top:10px}
-  .notice.warn{background:var(--warnbg);color:#f3d29a;border:1px solid rgba(245,184,75,.3)}
-  .notice.bad{background:var(--badbg);color:#ffb4bb;border:1px solid rgba(255,93,108,.3)}
-  .notice.info{background:rgba(124,156,255,.1);color:#c3d0ff;border:1px solid rgba(124,156,255,.25)}
-  .legend{display:flex;gap:12px;flex-wrap:wrap;font-size:12px;color:var(--muted);margin-top:8px}
-  .legend span{display:inline-flex;align-items:center;gap:5px}
-  .legend i{width:8px;height:8px;border-radius:50%;display:inline-block}
-  .empty{color:var(--muted);font-size:13.5px;padding:8px 0 2px}
-  .help p,.help li{color:#c4c9d6;font-size:13.5px}
-  .help ul{padding-left:18px;margin:6px 0}
-  .modal{position:fixed;inset:0;background:rgba(0,0,0,.6);display:none;align-items:center;justify-content:center;padding:16px;z-index:10}
+  details summary::after{content:'+';font-family:var(--body);font-weight:800;transition:transform .2s}
+  details[open] summary::after{transform:rotate(45deg)}
+  .nets{display:grid;grid-template-columns:repeat(auto-fill,minmax(290px,1fr));gap:10px;margin-top:12px}
+  .net{border:2px solid var(--ink);border-radius:12px;padding:10px;background:var(--soft)}
+  .net label{display:flex;align-items:center;gap:8px;font-weight:700;font-size:14.5px;margin-bottom:6px}
+  .net .cid{font-weight:400;font-size:12.5px;color:#5b5780}
+  .net input[type=text]{width:100%;border:2px solid var(--ink);border-radius:8px;padding:6px 8px;font:12px var(--mono);background:#fff;color:var(--ink)}
+  input[type=checkbox]{accent-color:var(--ink);width:16px;height:16px}
+  .help p,.help li{font-size:15px;max-width:70ch}
+  .help ul{padding-left:20px}
+  .help li{margin:6px 0}
+
+  .modal{position:fixed;inset:0;background:rgba(26,20,70,.55);display:none;align-items:center;justify-content:center;padding:16px;z-index:40}
   .modal.on{display:flex}
-  .modal .box{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:16px;width:100%;max-width:360px}
-  .wallet-opt{display:flex;align-items:center;gap:10px;width:100%;margin-top:8px;text-align:left}
+  .modal .box{background:var(--paper);border:3px solid var(--ink);border-radius:18px;box-shadow:var(--shadow);padding:18px;width:100%;max-width:360px}
+  .wallet-opt{width:100%;margin-top:10px;justify-content:flex-start}
   .wallet-opt img{width:24px;height:24px;border-radius:6px}
-  .toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%) translateY(20px);background:#1f2430;border:1px solid var(--line);padding:9px 14px;border-radius:10px;font-size:13px;opacity:0;transition:.2s;pointer-events:none;z-index:20}
+  .toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%) translateY(30px);background:var(--ink);color:#fff;padding:10px 16px;border-radius:12px;font-weight:600;font-size:14px;opacity:0;transition:.2s;pointer-events:none;z-index:50}
   .toast.on{opacity:1;transform:translateX(-50%) translateY(0)}
-  .progress{height:3px;background:var(--line);border-radius:3px;overflow:hidden;margin-top:10px;display:none}
-  .progress div{height:100%;width:0;background:linear-gradient(90deg,var(--accent2),#b18cff);transition:width .2s}
+  footer{margin-top:34px;font-size:13px;color:#5b5780}
+
+  @media (max-width:860px){
+    .hero{grid-template-columns:1fr}
+    .meme-wrap{position:static}
+    .deleg-item{grid-template-columns:1fr;gap:4px}
+    .stat{min-width:0;flex:1 1 30%}
+  }
+  @media (prefers-reduced-motion:reduce){
+    *,*::before,*::after{animation:none!important;transition:none!important}
+    .confetti,.flash{display:none}
+  }
 </style>
 </head>
 <body>
 <div class="wrap">
   <header>
-    <div class="brand">
-      <div class="logo">7702</div>
-      <div>
-        <h1>EIP-7702 Delegation Checker</h1>
-        <p class="sub">See whether an account has an EIP-7702 delegation on selected EVM networks.</p>
-      </div>
+    <a class="logo" href="./"><b>7702?</b> checker</a>
+    <div class="hdr-actions">
+      <label class="toggle" title="Meme captions on the verdict card. Turn off for plain wording."><input type="checkbox" id="memeToggle" checked> Meme mode</label>
+      <button id="connectBtn">Connect wallet</button>
     </div>
-    <button id="connectBtn" class="primary walletbtn">Connect wallet</button>
   </header>
 
   <div id="envNotice"></div>
 
-  <!-- Connected wallet -->
-  <section class="card" id="walletCard">
-    <h2><span>Your connected wallet</span>
-      <span class="row"><button class="small ghost" id="walletRecheck" disabled>Re-check</button></span>
-    </h2>
-    <div id="walletBody" class="empty">Connect a wallet to check it on every selected network.</div>
-  </section>
+  <div class="hero">
+    <div>
+      <h1>Did your wallet<br><span class="tilt">get 7702'd?</span></h1>
+      <p class="lede">EIP-7702 lets a wallet point itself at a smart contract. Great for smart accounts, and a favourite trick of sweeper bots. Check any address on <strong id="chainCountLede">16 chains</strong> at once. Read-only, nothing to sign.</p>
 
-  <!-- Paste addresses -->
-  <section class="card">
-    <h2><span>Check many addresses</span><span id="foundCount" class="pill grey">0 addresses</span></h2>
-    <textarea id="addrInput" spellcheck="false" placeholder="Paste addresses here: one per line, or separated by commas or spaces.&#10;Any text is fine, the page picks out every 0x… address it finds.&#10;&#10;0x63c0c19a282a1B52b07dD5a65b58948A07DAE32B&#10;0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045"></textarea>
-    <div class="row" style="margin-top:10px">
-      <button class="primary" id="checkBtn">Check addresses</button>
-      <button id="clearBtn">Clear</button>
-      <span class="muted tiny" id="netSummary"></span>
+      <div class="panel">
+        <h2><span>Paste addresses</span><span id="foundCount" class="count">0 addresses · max 100</span></h2>
+        <textarea id="addrInput" spellcheck="false" aria-label="Addresses to check" placeholder="Paste one or many 0x… addresses. Any text works, we pick out every address.&#10;&#10;0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045"></textarea>
+        <div class="row" style="margin-top:12px">
+          <button class="go" id="checkBtn">Check addresses</button>
+          <button id="clearBtn">Clear</button>
+        </div>
+        <p class="tiny muted" id="netSummary" style="margin:10px 0 0"></p>
+      </div>
     </div>
-    <div class="progress" id="progress"><div></div></div>
+
+    <div class="meme-wrap">
+      <div class="meme" id="meme" data-state="idle" aria-hidden="true">
+        <div class="cap top" id="capTop">Paste an address</div>
+        <div class="face" id="face">🤔</div>
+        <div class="cap bottom" id="capBottom">Find out</div>
+        <div class="wm">7702 checker</div>
+        <div class="bar" id="memeBar"></div>
+      </div>
+      <p class="verdict-text" id="verdictText" aria-live="polite">Connect a wallet or paste addresses. Results show up here.</p>
+      <div class="share" id="shareRow" hidden>
+        <button class="small" id="saveMeme">Save meme</button>
+        <button class="small" id="copyMeme">Copy image</button>
+        <a class="btn small" id="postX" href="#" target="_blank" rel="noopener">Post on X</a>
+        <button class="small" id="copyLink">Copy link to this check</button>
+      </div>
+    </div>
+  </div>
+
+  <section id="walletSection" hidden>
+    <div class="panel">
+      <h2><span>Your wallet</span><button class="small" id="walletRecheck">Re-check</button></h2>
+      <div id="walletBody"></div>
+    </div>
   </section>
 
-  <section class="card" id="resultsCard" style="display:none">
-    <h2><span>Results</span>
-      <span class="row">
-        <span class="seg" id="filterSeg">
-          <button data-f="all" class="on">All</button>
-          <button data-f="deleg">Delegated</button>
-          <button data-f="clean">No delegation observed</button>
-          <button data-f="err">Errors</button>
+  <section id="resultsCard" hidden>
+    <div class="panel">
+      <h2><span>Results</span>
+        <span class="row">
+          <span class="seg" id="filterSeg" role="group" aria-label="Filter results">
+            <button data-f="all" class="on">All</button><button data-f="deleg">Delegated</button><button data-f="clean">No delegation</button><button data-f="err">Errors</button>
+          </span>
+          <button class="small" id="copyCsv">Copy CSV</button>
+          <button class="small" id="retryErr">Retry errors</button>
         </span>
-        <button class="small" id="copyCsv">Copy CSV</button>
-        <button class="small" id="retryErr">Retry errors</button>
-      </span>
-    </h2>
-    <div class="stats" id="stats"></div>
-    <div class="legend">
-      <span><i style="background:var(--ok)"></i>No delegation observed on every checked network</span>
-      <span><i style="background:var(--info)"></i>Verified familiar delegate</span>
-      <span><i style="background:var(--warn)"></i>Delegated — inspect the delegate contract</span>
-      <span><i style="background:var(--bad)"></i>Verified reported malicious delegate</span>
-      <span><i style="background:#9fb3c8"></i>Is a contract (not an EOA)</span>
-      <span><i style="background:#c9a3a8"></i>RPC error</span>
+      </h2>
+      <div class="stats" id="stats"></div>
+      <div id="results"></div>
     </div>
-    <div id="results"></div>
   </section>
 
-  <!-- Networks -->
-  <section class="card">
+  <section>
     <details id="netDetails">
       <summary>Networks and RPC settings</summary>
-      <p class="muted tiny" style="margin:10px 0 0">Turn chains on or off. Each chain tries its RPC URLs in order and moves to the next if one fails. You can paste your own RPC URL (Alchemy, Infura, etc.) at the front of the list for faster and more reliable checks. Settings are saved in this browser.</p>
-      <div class="row" style="margin-top:10px">
+      <p class="tiny muted">Turn networks on or off. Each network tries its RPC URLs in order and moves to the next one if a request fails. Put your own RPC URL (Alchemy, Infura…) first for faster, more reliable checks. Saved in this browser only.</p>
+      <div class="row">
         <label class="row tiny" style="gap:6px"><input type="checkbox" id="testnetToggle"> Show testnets</label>
         <button class="small" id="allOn">All on</button>
         <button class="small" id="allOff">All off</button>
@@ -177,29 +265,29 @@
       </div>
       <div class="nets" id="nets"></div>
     </details>
-  </section>
 
-  <section class="card help">
-    <details>
-      <summary>What does this check, and what should I do if I find a delegation?</summary>
-      <p>With EIP-7702, a normal wallet (EOA) can sign an authorization that points its account at a smart contract. After that, the contract's code runs whenever the wallet is called. On-chain, the wallet's code becomes <span class="mono">0xef0100</span> followed by the 20-byte address of that contract. This page reads each address's code with <span class="mono">eth_getCode</span> on every selected chain and decodes it.</p>
+    <details class="help">
+      <summary>What does this check, and what do I do if I'm delegated?</summary>
+      <p>With EIP-7702, a normal wallet can sign an authorization that points it at a smart contract. After that, the contract's code runs whenever the wallet is called. On-chain, the wallet's code becomes <span class="mono">0xef0100</span> plus the 20-byte address of that contract. This page reads each address's code with <span class="mono">eth_getCode</span> on every selected network and decodes it.</p>
       <ul>
-        <li><b>Each chain is separate.</b> A delegation on Base does not show up on Ethereum. Authorizations signed with chain ID 0 can be used on <i>every</i> chain, so check every network relevant to the account.</li>
-        <li><b>Verified familiar (purple):</b> the delegate address and its deployed code match a built-in fingerprint for that network. This is an identification aid, not a security audit.</li>
-        <li><b>Delegated (amber):</b> inspect the delegate contract on that network. If you did not set it up yourself, treat the account as potentially controlled and avoid funding or interacting with it until independently verified.</li>
-        <li><b>Verified reported malicious (red):</b> the delegate address and code match a built-in fingerprint for a reported sweeper. Treat the account as potentially controlled; do not fund it or rely on its private key being safe.</li>
-        <li><b>To remove a delegation,</b> sign a new 7702 authorization that points to <span class="mono">0x0000…0000</span>. In MetaMask: account menu → <i>Account details</i> → <i>Smart account</i> → <i>Switch back</i> (per network). If the key is compromised, removing the delegation does not make the wallet safe again.</li>
+        <li><b>Each chain is separate.</b> A delegation on Base does not show up on Ethereum. Authorizations signed with chain ID 0 work on <i>every</i> chain, so check every network the account uses.</li>
+        <li><b>Familiar contract (purple):</b> the delegate's address and its deployed code match a built-in fingerprint for that network, for example a MetaMask Smart Account. That identifies the contract. It is not a security audit, and it is only fine if you set it up yourself.</li>
+        <li><b>Unverified contract (orange):</b> look the delegate up on the block explorer. If you did not set it up, treat the account as possibly controlled by someone else. Don't fund it or use it until you have checked.</li>
+        <li><b>Reported sweeper (red):</b> the delegate's code matches a reported sweeper. Treat the account as compromised. Don't send funds to it, and move anything left to a new wallet with a new seed phrase.</li>
+        <li><b>To remove a delegation,</b> sign a new 7702 authorization that points to <span class="mono">0x0000…0000</span>. In MetaMask: account menu, then <i>Account details</i>, <i>Smart account</i>, <i>Switch back</i> (per network). If the key is compromised, removing the delegation does not make the wallet safe again.</li>
       </ul>
-      <p class="muted tiny">This page only reads public chain data and never asks you to sign. To perform a check, your browser sends each address (and, when delegated, its delegate) to the selected RPC provider(s); those providers can associate requests with your IP address. Built-in labels require a matching chain-specific SHA-256 code fingerprint. Results are not a security audit, and an RPC error means the result is inconclusive for that network.</p>
+      <p class="tiny muted">This page only reads public chain data and never asks you to sign. To run a check, your browser sends each address (and, when delegated, its delegate) to the selected RPC providers, who can link those requests to your IP address. Labels need a matching per-network SHA-256 fingerprint of the deployed code. Results are not a security audit, and an RPC error means that network's result is unknown.</p>
     </details>
   </section>
+
+  <footer>Read-only. Open source at <a href="https://github.com/hrishikeshio/7702checker">github.com/hrishikeshio/7702checker</a>. Not financial or security advice.</footer>
 </div>
 
 <div class="modal" id="walletModal"><div class="box">
-  <div class="row" style="justify-content:space-between"><b>Choose a wallet</b><button class="small ghost" id="closeModal">Close</button></div>
+  <div class="row" style="justify-content:space-between"><b>Choose a wallet</b><button class="small" id="closeModal">Close</button></div>
   <div id="walletOpts"></div>
 </div></div>
-<div class="toast" id="toast"></div>
+<div class="toast" id="toast" role="status"></div>
 
 <script>
 (() => {
@@ -231,21 +319,53 @@ const DEFAULT_CHAINS = [
 ];
 
 /*
- * Labels are only used when both the chain ID and SHA-256 of the currently
- * deployed delegate bytecode match. The Ethereum-mainnet fingerprints below
- * are intentionally narrow; every other deployment remains unverified.
+ * Delegate labels. A label is used only when the delegate's deployed bytecode on
+ * that chain hashes (SHA-256) to the fingerprint recorded for that chain.
+ * Some contracts bake the chain ID and an EIP-712 domain separator into their
+ * bytecode, so their fingerprint differs per chain. Each non-Ethereum fingerprint
+ * below was checked to differ from the Ethereum bytecode only in those two values.
+ * Reported sweepers are matched by code hash alone, on any address and any chain,
+ * so copies of the same sweeper code are caught too.
  */
-const VERIFIED_DELEGATES = {
-  1: {
-    '0x63c0c19a282a1b52b07dd5a65b58948a07dae32b': {name:'MetaMask Smart Account (EIP7702StatelessDeleGator)', kind:'good', sha256:'deb51590e22cdf9f70292f763d6d3aea8b078148aae082f3af1eca19bf0aa58c'},
-    '0x000000009b1d0af20d8c6d0a44e162d11f9b8f00': {name:'Uniswap Wallet – Calibur v1.0.0', kind:'good', sha256:'ec2f73e60cd9acf855d1b6b4dfa3f6b7209066ff4194b72af230834f69f5bbb9'},
-    '0x000000005c84f8fd50b21cac312528a64437030e': {name:'Uniswap Wallet – Calibur v1.1.0', kind:'good', sha256:'91d278eed4489e727fa971fa851c88cb28a62504d48c0e15b3c9af9df7fbbc74'},
-    '0xe6cae83bde06e4c305530e199d7217f42808555b': {name:'Simple7702Account v0.8 (eth-infinitism)', kind:'good', sha256:'e5cafd6d044419dd87f11e2797e1ef8c62d838ee13b3ebbb2499745998b32e74'},
-    '0x80296ff8d1ed46f8e3c7992664d13b833504c2bb': {name:'OKX Wallet Core', kind:'good', sha256:'b701151cec54963b3390a7ccf142347308600445cb97a3e17a60d4c45fbf9f77'},
-    '0xd6999651fc0964b9c6b444307a0ab20534a66560': {name:'thirdweb Minimal Account', kind:'good', sha256:'569a299921f74d0e9b60d943400a5c2da3871e4e870d7d40b6d3a52a0c3c2e8a'},
-    '0x930fcc37d6042c79211ee18a02857cb1fd7f0d0b': {name:'Reported phishing sweeper', kind:'bad', sha256:'10eaf1136d94f41a049eecb4bc03000891e65f2aab67fa645504cc499f273fa0'},
-  },
+const DELEGATES = {
+  mm:    {addr:'0x63c0c19a282a1b52b07dd5a65b58948a07dae32b', name:'MetaMask Smart Account', kind:'good'},
+  cal10: {addr:'0x000000009b1d0af20d8c6d0a44e162d11f9b8f00', name:'Uniswap Wallet (Calibur v1.0.0)', kind:'good'},
+  cal11: {addr:'0x000000005c84f8fd50b21cac312528a64437030e', name:'Uniswap Wallet (Calibur v1.1.0)', kind:'good'},
+  s7702: {addr:'0xe6cae83bde06e4c305530e199d7217f42808555b', name:'Simple7702Account v0.8 (eth-infinitism)', kind:'good'},
+  okx:   {addr:'0x80296ff8d1ed46f8e3c7992664d13b833504c2bb', name:'OKX Wallet Core', kind:'good'},
+  tw:    {addr:'0xd6999651fc0964b9c6b444307a0ab20534a66560', name:'thirdweb Minimal Account', kind:'good'},
 };
+const SAME = { // identical bytecode on every chain where deployed
+  cal10:'ec2f73e60cd9acf855d1b6b4dfa3f6b7209066ff4194b72af230834f69f5bbb9',
+  cal11:'91d278eed4489e727fa971fa851c88cb28a62504d48c0e15b3c9af9df7fbbc74',
+  s7702:'e5cafd6d044419dd87f11e2797e1ef8c62d838ee13b3ebbb2499745998b32e74',
+};
+const FINGERPRINTS = {
+  1:       {mm:'deb51590e22cdf9f70292f763d6d3aea8b078148aae082f3af1eca19bf0aa58c', cal10:SAME.cal10, cal11:SAME.cal11, s7702:SAME.s7702, okx:'b701151cec54963b3390a7ccf142347308600445cb97a3e17a60d4c45fbf9f77', tw:'569a299921f74d0e9b60d943400a5c2da3871e4e870d7d40b6d3a52a0c3c2e8a'},
+  10:      {mm:'c9ec13d4956791980ff7bf48dd71d748acb3ca68e0cbed32d13ac97f6278c13d', cal10:SAME.cal10, cal11:SAME.cal11, s7702:SAME.s7702, okx:'6223682b49a2e394547dcdee2ca70d3545895f18df01c5ff7e1f3a16c5dee607', tw:'7af30720c4fbf8d50f899fca6e3b16084f0fff91278efd44a9d1738b991ada3a'},
+  56:      {mm:'6e4c6247a63c1d8cfc647f21f0ca932fa3e7c03ddae1cbf590351eee39ede550', cal10:SAME.cal10, cal11:SAME.cal11, s7702:SAME.s7702, okx:'9f27efb32c02a6366b916aa371fc59095c28e8aae2817690546aa43c522e0fb0', tw:'aa2d5cde17bdd9b29ce86cfa81707cd0d3e1604c9fec870e389e2000d5555d87'},
+  100:     {mm:'54d1d462b7e78794f2813dc9f65ea9c593a37deb443f5bcc134c75e5ab5aa728', cal10:SAME.cal10, cal11:SAME.cal11, s7702:SAME.s7702, tw:'345fed3e3394df8edb04384059ace62c92f07bca5f76747a6a4ace24b29cb246'},
+  130:     {mm:'473e610f5d6013b36c32b43d291f2371dd924e6c8b4f1f2c3ac4cee9610a72d4', cal10:SAME.cal10, cal11:SAME.cal11, s7702:SAME.s7702, okx:'5b166f60a57e60804897bed012059a3665a1eaa7fa20c11c958564f47577e487', tw:'4864b925f89b07a140f89e6bfefdf6661a0f0a3c2e10d0a2f0c8cc9b01a6e46f'},
+  137:     {mm:'93c1b1571a3ed6ba80522cc565cda4d6a5aa8c155121a5fbf847fd719fbe329c', cal10:SAME.cal10, cal11:SAME.cal11, s7702:SAME.s7702, okx:'f838ba7a8d23934c253894b200f7eceb5fc6a788aba49958098e9b4ca4a3d26c', tw:'669989e2554770871464c82e5508a14eb18e1fdfe3754c044af3069a585691ab'},
+  1868:    {s7702:SAME.s7702, okx:'abde0a6438a7c01a3eb625ad4a3c5b621ea983e142790d4e00be913c1c8c671c', tw:'15c497a04061b1a460d8bb04ec90ac215a37bde40af1901ecde7ca842b320ab6'},
+  8453:    {mm:'4353bc53e63ffaeeba7293af252a0bcef724a1c0419c5ed63298fa0788067d67', cal10:SAME.cal10, cal11:SAME.cal11, s7702:SAME.s7702, okx:'f93b88b9cd3fd0cdfc74cd81c15a74db6cb664e8627f1d09ab154ed2199e7098', tw:'c017d96addf659881ae966fd54e6185d97b516ae85ed1fe016854a220b3f8656'},
+  34443:   {s7702:SAME.s7702, tw:'5fa1650a20d769fca45fcff285510eee4a0b3a6c3301f66e41d6572b94e0e478'},
+  42161:   {mm:'e3e3d989c9599c7f44799f7859d4ef08f629d0558ece267eda604973d62c7c85', cal10:SAME.cal10, cal11:SAME.cal11, s7702:SAME.s7702, okx:'a585c7ba83cec445840b7b38d782521f5e7574ec8dac9fb20dfc988caf8980c1', tw:'251ff0806a7c0ee6078dd32d5218c91d931e20f2a92faf6161404eeedc899139'},
+  42220:   {mm:'0e6895ded7960876a178a988bbe4baf0931c3ab92a52db760075554e64f778d1', s7702:SAME.s7702},
+  43114:   {mm:'31390cebf8aa25220bef3de925fecf51e509dc898d679287f2f278535bbbd443', cal10:SAME.cal10, s7702:SAME.s7702},
+  57073:   {mm:'14e06aa6ff5c77a415be488fdc276435d8144648f3a06907c07fd943be057817', cal10:SAME.cal10, cal11:SAME.cal11, s7702:SAME.s7702, tw:'391d30c8e2ccfe8ff7b3f9bb5e581b392c76baf43813654fd5a8018752b19b34'},
+  80094:   {mm:'a06ef8be9212f991b9185ce135d3689beb0a6eadbb139b9b2b54828e924c1f36', cal10:SAME.cal10, s7702:SAME.s7702, tw:'00b649abd77345408ffe2e2279e41dca28b03caa16e0584d8ab2da5da56ef4fe'},
+  534352:  {cal10:SAME.cal10, s7702:SAME.s7702, okx:'cf86ca8d47670b4dd34e1c10aa412319880b0d87d88e2838355c948f516a1d16', tw:'9c41c753ee0d7d25f4f826bbb3c00e346f3cd64c499a2a3cdafc03cb806244ab'},
+  7777777: {cal10:SAME.cal10, s7702:SAME.s7702, tw:'844973ae07b60f139774deb962849fea5cd0723f6fad9713db59ae5d1b491bca'},
+};
+const BAD_CODE = { // sha256(runtime bytecode) -> label, matched on any address/chain
+  '10eaf1136d94f41a049eecb4bc03000891e65f2aab67fa645504cc499f273fa0': 'Reported phishing sweeper (forwards incoming ETH to an attacker)',
+};
+function lookupFamiliar(chainId, delegate, hash){
+  const fp = FINGERPRINTS[chainId]; if (!fp) return null;
+  for (const [k, h] of Object.entries(fp)) if (DELEGATES[k].addr === delegate && h === hash) return DELEGATES[k];
+  return null;
+}
 
 /* ---------------- Settings ---------------- */
 const LS_KEY = 'eip7702checker.v1';
@@ -253,7 +373,7 @@ const store = {
   get(){ try { return JSON.parse(localStorage.getItem(LS_KEY) || '{}'); } catch { return {}; } },
   set(v){ try { localStorage.setItem(LS_KEY, JSON.stringify(v)); } catch {} }
 };
-let settings = Object.assign({enabled:{}, rpcs:{}, testnets:false}, store.get());
+let settings = Object.assign({enabled:{}, rpcs:{}, testnets:false, meme:true}, store.get());
 const chainState = {}; // id -> {good:idx, batchOk:bool}
 function chainRpcs(c){ const r = settings.rpcs[c.id]; return (r && r.length) ? r : c.rpcs; }
 function isEnabled(c){ if (c.testnet && !settings.testnets) return false; const e = settings.enabled[c.id]; return e === undefined ? !c.testnet : e; }
@@ -264,10 +384,12 @@ function save(){ store.set(settings); }
 const $ = s => document.querySelector(s);
 const esc = s => String(s).replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
 const short = a => a.slice(0,6) + '…' + a.slice(-4);
-function toast(msg){ const t=$('#toast'); t.textContent=msg; t.classList.add('on'); clearTimeout(t._h); t._h=setTimeout(()=>t.classList.remove('on'),1800); }
-async function copyText(txt){ try { await navigator.clipboard.writeText(txt); toast('Copied'); } catch {
+const plural = (n, w, ws) => `${n} ${n===1 ? w : (ws || w + 's')}`;
+const reduceMotion = () => window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+function toast(msg){ const t=$('#toast'); t.textContent=msg; t.classList.add('on'); clearTimeout(t._h); t._h=setTimeout(()=>t.classList.remove('on'),2000); }
+async function copyText(txt, msg='Copied'){ try { await navigator.clipboard.writeText(txt); toast(msg); } catch {
   const ta=document.createElement('textarea'); ta.value=txt; document.body.appendChild(ta); ta.select();
-  try{ document.execCommand('copy'); toast('Copied'); }catch{ toast('Copy failed'); } ta.remove(); } }
+  try{ document.execCommand('copy'); toast(msg); }catch{ toast('Copy failed'); } ta.remove(); } }
 function parseAddresses(text){
   const m = text.match(/0x[a-fA-F0-9]{40}(?![a-fA-F0-9])/g) || [];
   const seen = new Set(), out = [];
@@ -314,7 +436,6 @@ async function getCodeSingle(chain, addr){
     const r = await rpc(chain, {jsonrpc:'2.0', id:1, method:'eth_getCode', params:[addr,'latest']});
     return {code:r.result};
   } catch(e){
-    // Fallback: use the connected wallet's own RPC if it is on this chain
     if (wallet.provider && wallet.chainId === chain.id){
       try { const code = await wallet.provider.request({method:'eth_getCode', params:[addr,'latest']}); if (typeof code==='string') return {code, via:'wallet'}; } catch {}
     }
@@ -339,6 +460,23 @@ async function getCodes(chain, addrs, onResult){
     await pool(pending, 4, async a => onResult(a, await getCodeSingle(chain, a)));
   }
 }
+
+/* Delegate code is fetched once per chain + delegate and shared by every address that points at it. */
+const delegateInfoCache = new Map(); // `${chainId}|${delegate}` -> Promise<{hash, empty} | null>
+function delegateInfo(chain, delegate){
+  const key = chain.id + '|' + delegate;
+  if (!delegateInfoCache.has(key)){
+    const p = (async () => {
+      const target = await getCodeSingle(chain, delegate);
+      if (target.error) return null;
+      const code = (target.code || '0x').toLowerCase();
+      return {empty: code === '0x', hash: await sha256Hex(code)};
+    })();
+    delegateInfoCache.set(key, p);
+    p.then(r => { if (!r) delegateInfoCache.delete(key); }); // retry failed lookups next time
+  }
+  return delegateInfoCache.get(key);
+}
 async function classify(chain, res){
   if (!res) return {status:'loading'};
   if (res.error) return {status:'err', error:res.error};
@@ -346,125 +484,200 @@ async function classify(chain, res){
   if (code === '0x' || code === '0x0' || /^0x0*$/.test(code)) return {status:'clean', via:res.via};
   if (code.startsWith('0xef0100') && code.length === 48){
     const delegate = '0x' + code.slice(8);
-    const entry = VERIFIED_DELEGATES[chain.id]?.[delegate];
-    if (entry){
-      const target = await getCodeSingle(chain, delegate);
-      const hash = target.error ? null : await sha256Hex((target.code || '0x').toLowerCase());
-      if (hash === entry.sha256) return {status:entry.kind==='bad'?'bad':'known', delegate, label:entry.name, via:res.via};
-    }
-    return {status:'deleg', delegate, label:'Unverified delegate contract', via:res.via};
+    const info = await delegateInfo(chain, delegate);
+    if (info && BAD_CODE[info.hash]) return {status:'bad', delegate, label:BAD_CODE[info.hash], via:res.via};
+    const fam = info && lookupFamiliar(chain.id, delegate, info.hash);
+    if (fam) return {status:'known', delegate, label:fam.name, via:res.via};
+    return {status:'deleg', delegate, label:'Unverified delegate contract', empty: !!(info && info.empty), via:res.via};
   }
   return {status:'contract', size:(code.length-2)/2, via:res.via};
 }
 
 /* ---------------- Checking ---------------- */
 // result sets: key -> { addrs:[], data:{ addrLower: { chainId: classified } } }
-const sets = { wallet:{addrs:[], data:{}, stale:false, generation:0}, paste:{addrs:[], data:{}, stale:false, generation:0} };
+const newSet = (gen=0) => ({addrs:[], data:{}, stale:false, generation:gen});
+const sets = { wallet:newSet(), paste:newSet() };
 let progress = {done:0, total:0};
+let focus = null; // which result the meme card shows: 'wallet' | 'paste'
 
-async function runCheck(setKey, addrs, chains){
+async function runCheck(setKey, addrs, chains, opts={}){
   const set = sets[setKey];
   const generation = ++set.generation;
+  // A run is current only while its set object is still installed and no newer run started.
+  const isCurrent = () => sets[setKey] === set && set.generation === generation;
   if (addrs) { set.addrs = addrs; set.data = {}; }
   chains = chains || activeChains();
   if (!chains.length){ set.stale=true; scheduleRender(); return false; }
   set.stale=false;
+  // Background runs (reconnect, settings change) don't take over the meme card if it already shows something.
+  if (!(opts.keepFocus && focus)) focus = setKey;
+  lastFinal[setKey] = null;
   for (const a of set.addrs){ const k=a.toLowerCase(); set.data[k] ||= {}; for (const c of chains){ if (!set.data[k][c.id] || set.data[k][c.id].status==='err') set.data[k][c.id] = {status:'loading'}; } }
   const jobs = chains.map(c => ({c, list:set.addrs.filter(a => set.data[a.toLowerCase()][c.id].status==='loading')})).filter(j=>j.list.length);
   const total = jobs.reduce((s,j)=>s+j.list.length,0);
-  if (setKey==='paste'){ progress={done:0,total}; showProgress(); }
+  progress = {done:0,total};
   scheduleRender();
   await Promise.all(jobs.map(j => getCodes(j.c, j.list, async (a, res) => {
-    if (set.generation !== generation) return;
-    set.data[a.toLowerCase()][j.c.id] = await classify(j.c, res);
-    if (set.generation !== generation) return;
-    if (setKey==='paste'){ progress.done++; showProgress(); }
+    if (!isCurrent()) return;
+    const v = await classify(j.c, res);
+    if (!isCurrent()) return;
+    set.data[a.toLowerCase()][j.c.id] = v;
+    if (focus === setKey) progress.done++;
     scheduleRender();
   })));
-  if (setKey==='paste' && set.generation===generation) setTimeout(()=>{ if (set.generation===generation) $('#progress').style.display='none'; }, 500);
   return true;
 }
-function showProgress(){ const p=$('#progress'); p.style.display = progress.total ? 'block':'none'; p.firstElementChild.style.width = (progress.total? (100*progress.done/progress.total):0) + '%'; }
 
-/* ---------------- Rendering ---------------- */
-let renderQueued = false;
-function scheduleRender(){ if (renderQueued) return; renderQueued = true; requestAnimationFrame(()=>{ renderQueued=false; renderWallet(); renderPaste(); }); }
-const chainById = id => DEFAULT_CHAINS.find(c=>c.id===+id);
-// keep chains in the list order (Ethereum first), not numeric chain-id order
+/* ---------------- Verdicts ---------------- */
 const orderedEntries = row => DEFAULT_CHAINS.filter(c => row[c.id]).map(c => [String(c.id), row[c.id]]);
+const chainById = id => DEFAULT_CHAINS.find(c=>c.id===+id);
 function summarize(row){
   const vals = orderedEntries(row);
   const by = s => vals.filter(([,v])=>v.status===s);
   return { bad:by('bad'), known:by('known'), deleg:by('deleg'), clean:by('clean'), contract:by('contract'), err:by('err'), loading:by('loading'), total:vals.length };
 }
-function headPill(s){
-  if (!s.total) return `<span class="pill grey">Not checked</span>`;
-  if (s.loading.length) return `<span class="pill grey">Checking… ${s.total-s.loading.length}/${s.total}</span>`;
-  if (s.bad.length) return `<span class="pill bad">⚠ Reported malicious delegation on ${s.bad.length} chain${s.bad.length>1?'s':''}</span>`;
-  const d = s.deleg.length + s.known.length;
-  if (s.deleg.length) return `<span class="pill warn">Delegated on ${d} chain${d>1?'s':''}</span>`;
-  if (s.known.length) return `<span class="pill info">Delegated to familiar contract on ${d} chain${d>1?'s':''}</span>`;
-  if (s.err.length) return `<span class="pill grey">Incomplete · ${s.err.length} network error${s.err.length>1?'s':''}</span>`;
-  if (s.contract.length) return `<span class="pill grey">Smart contract on ${s.contract.length} chain${s.contract.length>1?'s':''}</span>`;
-  return `<span class="pill ok">✓ No delegation observed</span>`;
+function stateOf(s){
+  if (!s.total) return 'none';
+  if (s.loading.length) return 'loading';
+  if (s.bad.length) return 'bad';
+  if (s.deleg.length) return 'deleg';
+  if (s.known.length) return 'known';
+  if (s.err.length) return 'err';
+  if (s.contract.length) return 'contract';
+  return 'clean';
 }
+const FACES = {idle:'🤔', loading:'👀', clean:'😎', known:'🤝', deleg:'🤨', bad:'💀', err:'🫠', contract:'🤖', none:'😶', stale:'🔁'};
+const LOADING_LINES = ['Ser, please hold', 'Asking the nodes nicely', 'Reading bytecode so you don\'t have to', 'Few understand', 'Probably nothing'];
+const chainsLabel = n => plural(n, 'chain');
+
+// Captions for one address (wallet, or a single pasted address)
+function singleCaptions(state, s, nChains){
+  const firstDeleg = (s.bad[0] || s.deleg[0] || s.known[0] || [])[1];
+  const meme = {
+    loading: ['Checking ' + chainsLabel(nChains), LOADING_LINES[Math.floor(Date.now()/1600) % LOADING_LINES.length]],
+    clean:   ['No 7702 delegation', 'Wagmi (on ' + chainsLabel(s.clean.length) + ')'],
+    known:   ['Delegated to ' + (firstDeleg ? firstDeleg.label.replace(/ \(.*\)$/,'') : 'a smart account'), 'Probably fine if that was you'],
+    deleg:   ['Delegated to some random contract', 'Ser, this is sus'],
+    bad:     ['Delegated to a known sweeper', 'This wallet is cooked'],
+    err:     [plural(s.err.length, 'chain') + " didn't answer", 'Inconclusive. Hit retry.'],
+    contract:['This is a smart contract', 'Not a wallet, ser'],
+    none:    ['No networks selected', 'Pick at least one'],
+  };
+  const serious = {
+    loading: ['Checking ' + chainsLabel(nChains) + '…', ''],
+    clean:   ['No delegation observed', 'on ' + chainsLabel(s.clean.length)],
+    known:   ['Delegated to a familiar contract', firstDeleg ? firstDeleg.label : ''],
+    deleg:   ['Delegated to an unverified contract', 'Inspect it before using this account'],
+    bad:     ['Delegated to a reported sweeper', 'Treat this account as compromised'],
+    err:     ['Result incomplete', plural(s.err.length, 'network') + ' returned an error'],
+    contract:['This address is a smart contract', 'Not an EOA'],
+    none:    ['No networks selected', ''],
+  };
+  return (settings.meme ? meme : serious)[state];
+}
+function batchCaptions(state, counts, n){
+  const meme = {
+    loading: ['Checking ' + plural(n, 'wallet'), LOADING_LINES[Math.floor(Date.now()/1600) % LOADING_LINES.length]],
+    clean:   [plural(n, 'wallet') + ' checked', 'Zero 7702. Wagmi.'],
+    known:   [counts.known + ' of ' + n + ' use smart accounts', 'Probably fine if that was you'],
+    deleg:   [counts.deleg + ' of ' + n + ' wallets ' + (counts.deleg===1 ? 'is' : 'are') + ' delegated', 'Ser, this is sus'],
+    bad:     [counts.bad + ' of ' + n + ' wallets ' + (counts.bad===1 ? 'is' : 'are') + ' getting swept', 'Cooked. Act now.'],
+    err:     ['Some chains ghosted us', 'Inconclusive. Hit retry.'],
+    contract:['These are smart contracts', 'Not wallets, ser'],
+    none:    ['No networks selected', 'Pick at least one'],
+  };
+  const serious = {
+    loading: ['Checking ' + plural(n, 'address', 'addresses') + '…', ''],
+    clean:   ['No delegation observed', 'on any of ' + plural(n, 'address', 'addresses')],
+    known:   [counts.known + ' of ' + n + ' delegated to familiar contracts', ''],
+    deleg:   [counts.deleg + ' of ' + n + ' delegated to unverified contracts', 'Inspect them before use'],
+    bad:     [counts.bad + ' of ' + n + ' delegated to a reported sweeper', 'Treat those accounts as compromised'],
+    err:     ['Results incomplete', 'Some networks returned errors'],
+    contract:['All checked addresses are contracts', ''],
+    none:    ['No networks selected', ''],
+  };
+  return (settings.meme ? meme : serious)[state];
+}
+function batchState(rows){
+  const c = {bad:0, deleg:0, known:0, err:0, contract:0, clean:0, loading:0, none:0};
+  for (const r of rows) c[stateOf(r.s)]++;
+  let st = c.loading ? 'loading' : c.bad ? 'bad' : c.deleg ? 'deleg' : c.known ? 'known' : c.err ? 'err' : (c.contract && !c.clean) ? 'contract' : rows.length ? 'clean' : 'none';
+  return {state:st, counts:c};
+}
+
+/* ---------------- Rendering ---------------- */
+let renderQueued = false;
+function scheduleRender(){ if (renderQueued) return; renderQueued = true; requestAnimationFrame(()=>{ renderQueued=false; renderWallet(); renderPaste(); renderMeme(); }); }
+setInterval(() => { if ($('#meme').dataset.state === 'loading') renderMeme(); }, 1600);
+
+const STICKER = {
+  clean: s => settings.meme ? '✓ No 7702 · wagmi' : '✓ No delegation observed',
+  known: s => 'Familiar contract on ' + chainsLabel(s.known.length),
+  deleg: s => (settings.meme ? 'Sus · ' : '') + 'Delegated on ' + chainsLabel(s.deleg.length + s.known.length),
+  bad:   s => '💀 Reported sweeper on ' + chainsLabel(s.bad.length),
+  err:   s => 'Incomplete · ' + plural(s.err.length, 'network error'),
+  contract: s => 'Smart contract on ' + chainsLabel(s.contract.length),
+  loading: s => `Checking… ${s.total - s.loading.length}/${s.total}`,
+  none: () => 'Not checked',
+};
 function chipTitle(c, v){
   switch(v.status){
     case 'clean': return `${c.name}: no delegation observed` + (v.via?' (via wallet RPC)':'');
-    case 'known': case 'deleg': case 'bad': return `${c.name}: delegated to ${v.delegate} – ${v.label}`;
+    case 'known': case 'deleg': case 'bad': return `${c.name}: delegated to ${v.delegate} (${v.label})`;
     case 'contract': return `${c.name}: this address is a smart contract (${v.size} bytes of code)`;
     case 'err': return `${c.name}: ${v.error}`;
     default: return `${c.name}: checking…`;
   }
 }
 function renderAddr(addr, row){
-  const s = summarize(row);
-  const flag = s.bad.length ? 'flag-bad' : (s.deleg.length || s.known.length) ? 'flag-deleg' : '';
+  const s = summarize(row); const st = stateOf(s);
   const chips = orderedEntries(row).map(([id,v])=>{ const c=chainById(id); return `<span class="chip ${v.status}" title="${esc(chipTitle(c,v))}"><i></i>${esc(c.name)}</span>`; }).join('');
   const dl = [...s.bad, ...s.deleg, ...s.known].map(([id,v])=>{ const c=chainById(id);
-    const cls = v.status==='bad'?'bad':v.status==='known'?'info':'warn';
+    const extra = v.status==='deleg' && v.empty ? ' (no code deployed there)' : '';
     return `<div class="deleg-item"><b>${esc(c.name)}</b>
       <span class="mono"><a href="${c.explorer}/address/${v.delegate}" target="_blank" rel="noopener">${v.delegate}</a></span>
-      <span class="pill ${cls}">${esc(v.label)}</span></div>`; }).join('');
-  const contracts = s.contract.length ? `<div class="muted tiny" style="margin-top:8px">Has normal contract code on: ${s.contract.map(([id])=>esc(chainById(id).name)).join(', ')}. This is a smart contract, not a wallet that can be delegated.</div>` : '';
-  return `<div class="res ${flag}">
-    <div class="res-head"><span class="row" style="gap:6px"><span class="addr">${esc(addr)}</span>
-      <button class="small ghost" data-copy="${esc(addr)}" title="Copy address">Copy</button>
-      <a class="tiny" href="https://etherscan.io/address/${esc(addr)}" target="_blank" rel="noopener">Etherscan ↗</a></span>
-      ${headPill(s)}</div>
+      <span class="sticker ${v.status}">${esc(v.label + extra)}</span></div>`; }).join('');
+  const contracts = s.contract.length ? `<div class="note muted">Has normal contract code on ${s.contract.map(([id])=>esc(chainById(id).name)).join(', ')}. There it is a smart contract, not a wallet that can be delegated.</div>` : '';
+  return `<div class="addr-card v-${st}">
+    <div class="addr-head"><span class="row" style="gap:8px"><span class="addr">${esc(addr)}</span>
+      <button class="small" data-copy="${esc(addr)}" aria-label="Copy address">Copy</button></span>
+      <span class="sticker ${st}">${esc(STICKER[st](s))}</span></div>
     <div class="chips">${chips}</div>
     ${dl ? `<div class="deleg-list">${dl}</div>` : ''}${contracts}
   </div>`;
 }
 function renderWallet(){
-  const body = $('#walletBody');
-  if (!wallet.accounts.length){ return; }
+  const sec = $('#walletSection'), body = $('#walletBody');
+  if (!wallet.accounts.length){ sec.hidden = true; return; }
+  sec.hidden = false;
   const set = sets.wallet;
-  if (set.stale){ body.className=''; body.innerHTML='<div class="notice warn">Network settings changed or no networks are selected. Select at least one network, then re-check this wallet.</div>'; return; }
+  if (set.stale){ body.innerHTML='<div class="notice">Network settings changed or no networks are selected. Turn on at least one network, then re-check.</div>'; return; }
   const chainName = wallet.chainId ? (chainById(wallet.chainId)?.name || ('chain ' + wallet.chainId)) : '';
-  let html = `<div class="muted tiny">Connected${chainName? ' · wallet is on ' + esc(chainName):''}. Checked on ${activeChains().length} chains.</div>`;
+  let html = `<div class="tiny muted">Connected${chainName? ', wallet is on ' + esc(chainName):''}. Checked on ${chainsLabel(activeChains().length)}.</div>`;
   html += set.addrs.map(a => renderAddr(a, set.data[a.toLowerCase()] || {})).join('');
-  body.className=''; body.innerHTML = html;
+  body.innerHTML = html;
 }
 let filter = 'all';
+function pasteRows(){ const set = sets.paste; return set.addrs.map(a => { const r=set.data[a.toLowerCase()]||{}; return {a, r, s:summarize(r)}; }); }
 function renderPaste(){
   const set = sets.paste; const card = $('#resultsCard');
-  if (!set.addrs.length){ card.style.display='none'; return; }
-  card.style.display='';
-  if (set.stale){ $('#stats').innerHTML=''; $('#results').innerHTML='<div class="notice warn">Network settings changed. Results are stale; check the addresses again.</div>'; return; }
+  if (!set.addrs.length){ card.hidden = true; return; }
+  card.hidden = false;
+  if (set.stale){ $('#stats').innerHTML=''; $('#results').innerHTML='<div class="notice">Network settings changed, so these results are out of date. Check the addresses again.</div>'; return; }
+  const rows = pasteRows();
   let nDeleg=0, nBad=0, nClean=0, nErr=0, nLoading=0;
-  const rows = set.addrs.map(a => { const r=set.data[a.toLowerCase()]||{}; const s=summarize(r);
+  for (const {s} of rows){
     if (s.loading.length) nLoading++;
     if (s.bad.length) nBad++;
     if (s.bad.length||s.deleg.length||s.known.length) nDeleg++;
-    else if (!s.loading.length && !s.err.length && !s.contract.length) nClean++;
+    else if (s.total && s.clean.length===s.total) nClean++;
     if (s.err.length) nErr++;
-    return {a, r, s}; });
+  }
   $('#stats').innerHTML = `
     <div class="stat"><b>${set.addrs.length}</b><span>addresses</span></div>
-    <div class="stat"><b style="color:var(--warn)">${nDeleg}</b><span>with a delegation</span></div>
-    <div class="stat"><b style="color:var(--bad)">${nBad}</b><span>reported malicious</span></div>
-    <div class="stat"><b style="color:var(--ok)">${nClean}</b><span>no delegation observed</span></div>
+    <div class="stat s-deleg"><b>${nDeleg}</b><span>with a delegation</span></div>
+    <div class="stat s-bad"><b>${nBad}</b><span>reported sweeper</span></div>
+    <div class="stat s-clean"><b>${nClean}</b><span>no delegation observed</span></div>
     <div class="stat"><b>${nErr}</b><span>with RPC errors</span></div>`;
   const shown = rows.filter(({s}) => {
     if (filter==='deleg') return s.bad.length||s.deleg.length||s.known.length;
@@ -474,6 +687,168 @@ function renderPaste(){
   $('#results').innerHTML = shown.length ? shown.map(({a,r})=>renderAddr(a,r)).join('') : `<div class="empty">Nothing matches this filter${nLoading?' yet':''}.</div>`;
 }
 
+/* The meme card shows the latest check: the wallet, or the pasted batch. */
+const lastFinal = {wallet:null, paste:null};
+let current = {state:'idle', top:'Paste an address', bottom:'Find out', text:'', share:null};
+function verdictModel(){
+  if (focus === 'wallet' && wallet.accounts.length){
+    const set = sets.wallet;
+    if (set.stale) return {state:'stale', top:settings.meme?'Settings changed':'Settings changed', bottom:settings.meme?'Hit re-check':'Re-check to update', text:'Network settings changed. Re-check your wallet to update the result.'};
+    const a = set.addrs[0]; const s = summarize(set.data[a?.toLowerCase()] || {});
+    const st = stateOf(s); const [top,bottom] = singleCaptions(st, s, activeChains().length);
+    return {state:st, top, bottom, text:detailText(st, s, a, true), share:{addr:a, state:st, s, single:true}};
+  }
+  if (focus === 'paste' && sets.paste.addrs.length){
+    const set = sets.paste;
+    if (set.stale) return {state:'stale', top:'Settings changed', bottom:settings.meme?'Check again, ser':'Check again to update', text:'Network settings changed. Check the addresses again.'};
+    const rows = pasteRows();
+    if (rows.length === 1){
+      const {a, s} = rows[0]; const st = stateOf(s); const [top,bottom] = singleCaptions(st, s, activeChains().length);
+      return {state:st, top, bottom, text:detailText(st, s, a, false), share:{addr:a, state:st, s, single:true}};
+    }
+    const {state, counts} = batchState(rows); const [top,bottom] = batchCaptions(state, counts, rows.length);
+    return {state, top, bottom, text:batchText(state, counts, rows.length), share:{state, counts, n:rows.length}};
+  }
+  return {state:'idle', top:settings.meme?'Paste an address':'Paste an address', bottom:settings.meme?'Find out':'or connect a wallet', text:'Connect a wallet or paste addresses. Results show up here.', share:null};
+}
+function detailText(st, s, addr, isWallet){
+  const who = isWallet ? 'Your wallet' : `<span class="mono">${esc(short(addr))}</span>`;
+  const list = arr => arr.map(([id,v]) => `${esc(chainById(id).name)} (<span class="mono">${esc(short(v.delegate))}</span>, ${esc(v.label)})`).join('; ');
+  switch(st){
+    case 'loading': return `Checking ${who} on ${chainsLabel(s.total)}… ${s.total - s.loading.length} done.`;
+    case 'clean': return `${who} has <b>no EIP-7702 delegation</b> on any of the ${chainsLabel(s.clean.length)} checked.`;
+    case 'known': return `${who} is delegated on ${list(s.known)}. That's a familiar contract. It's only fine if you set it up yourself.`;
+    case 'deleg': return `${who} is delegated to an <b>unverified contract</b> on ${list(s.deleg)}${s.known.length ? '. Also familiar: ' + list(s.known) : ''}. If you didn't set this up, don't fund this account until you've checked the contract.`;
+    case 'bad': return `<b>${who} is delegated to a reported sweeper</b> on ${list(s.bad)}. Treat it as compromised: don't send funds, and move anything left to a new wallet with a new seed phrase.`;
+    case 'err': return `No delegation found so far, but ${plural(s.err.length, 'network')} returned an error (${s.err.map(([id])=>esc(chainById(id).name)).join(', ')}). Tap Retry errors.`;
+    case 'contract': return `${who} has normal contract code on ${s.contract.map(([id])=>esc(chainById(id).name)).join(', ')}, so it's a smart contract there, not a wallet. No delegation found elsewhere.`;
+    case 'none': return 'Turn on at least one network in the settings below.';
+  }
+  return '';
+}
+function batchText(st, c, n){
+  if (st === 'loading') return `Checking ${plural(n, 'address', 'addresses')} on ${chainsLabel(activeChains().length)}…`;
+  const parts = [];
+  if (c.bad) parts.push(`<b>${c.bad} delegated to a reported sweeper</b>`);
+  if (c.deleg) parts.push(`${c.deleg} delegated to an unverified contract`);
+  if (c.known) parts.push(`${c.known} delegated to a familiar contract`);
+  if (c.err) parts.push(`${c.err} incomplete because of network errors`);
+  if (c.clean) parts.push(`${c.clean} with no delegation observed`);
+  if (c.contract) parts.push(`${c.contract} smart contracts`);
+  return `Of ${plural(n, 'address', 'addresses')}: ${parts.join(', ')}. Details below.`;
+}
+function renderMeme(){
+  const m = verdictModel(); current = m;
+  const el = $('#meme');
+  el.classList.toggle('serious', !settings.meme);
+  el.classList.toggle('loading', m.state === 'loading');
+  el.dataset.state = m.state;
+  $('#capTop').textContent = m.top; $('#capBottom').textContent = m.bottom;
+  $('#face').textContent = FACES[m.state] || '🤔';
+  $('#verdictText').innerHTML = m.text;
+  $('#memeBar').style.width = m.state === 'loading' && progress.total ? (100*progress.done/progress.total) + '%' : '0';
+  const final = !['idle','loading','stale','none'].includes(m.state);
+  $('#shareRow').hidden = !final;
+  if (final){
+    const key = focus + ':' + m.state + ':' + m.top;
+    if (lastFinal[focus] !== key){ lastFinal[focus] = key; celebrate(m.state); }
+    updateShareLinks(m);
+  }
+}
+
+/* ---------------- Effects ---------------- */
+function celebrate(state){
+  const el = $('#meme');
+  el.classList.remove('stamp'); void el.offsetWidth; el.classList.add('stamp');
+  if (reduceMotion()) return;
+  if (state === 'clean') confetti();
+  if (state === 'bad'){
+    document.body.classList.remove('shake'); void document.body.offsetWidth; document.body.classList.add('shake');
+    const f = document.createElement('div'); f.className = 'flash'; document.body.appendChild(f); setTimeout(()=>f.remove(), 800);
+    setTimeout(()=>document.body.classList.remove('shake'), 600);
+  }
+  if (state === 'deleg'){ const v = $('#verdictText'); v.classList.remove('wobble'); void v.offsetWidth; v.classList.add('wobble'); }
+}
+function confetti(){
+  const colors = ['#FFD84D','#22D39B','#7C5CFF','#FF8A1F','#FF3355','#FFFFFF'];
+  for (let i=0;i<70;i++){
+    const p = document.createElement('i'); p.className = 'confetti';
+    p.style.left = (Math.random()*100) + 'vw';
+    p.style.background = colors[i % colors.length];
+    p.style.borderRadius = Math.random() < .4 ? '50%' : '2px';
+    p.style.setProperty('--dx', (Math.random()*160-80) + 'px');
+    p.style.setProperty('--rot', (Math.random()*900-450) + 'deg');
+    p.style.setProperty('--t', (1.4 + Math.random()*1.4) + 's');
+    p.style.setProperty('--d', (Math.random()*.35) + 's');
+    document.body.appendChild(p); setTimeout(()=>p.remove(), 3400);
+  }
+}
+
+/* ---------------- Sharing ---------------- */
+function siteUrl(){ return location.origin + location.pathname; }
+function shareText(m){
+  const s = m.share; if (!s) return '';
+  if (s.single){
+    const n = s.s.total;
+    return {
+      clean:`My wallet has no EIP-7702 delegation on ${chainsLabel(s.s.clean.length)}. Wagmi 😎`,
+      known:`My wallet is delegated to a familiar smart account. Probably fine 🤝`,
+      deleg:`Found an EIP-7702 delegation to an unverified contract. Sus 🤨`,
+      bad:`This wallet is delegated to a known sweeper. Cooked 💀`,
+      err:`Checked ${chainsLabel(n)} for EIP-7702 delegations. Some chains ghosted me 🫠`,
+      contract:`Checked an address for EIP-7702 delegation. It's a smart contract 🤖`,
+    }[s.state] + ' Check yours:';
+  }
+  return `Checked ${plural(s.n, 'wallet')} for EIP-7702 delegations: ${s.counts.bad} swept, ${s.counts.deleg} sus, ${s.counts.clean} clean. Check yours:`;
+}
+function updateShareLinks(m){
+  $('#postX').href = 'https://x.com/intent/post?text=' + encodeURIComponent(shareText(m)) + '&url=' + encodeURIComponent(siteUrl());
+  $('#copyLink').hidden = !(m.share && m.share.single);
+}
+function wrapLines(ctx, text, maxW){
+  const words = text.split(/\s+/); const lines = []; let line = '';
+  for (const w of words){ const t = line ? line + ' ' + w : w; if (ctx.measureText(t).width > maxW && line){ lines.push(line); line = w; } else line = t; }
+  if (line) lines.push(line); return lines;
+}
+async function memeBlob(){
+  const m = current; const W = 1200, H = 1000;
+  try { await document.fonts.load('80px Anton'); await document.fonts.load('600 40px "Bricolage Grotesque"'); } catch {}
+  const cv = document.createElement('canvas'); cv.width = W; cv.height = H; const ctx = cv.getContext('2d');
+  ctx.fillStyle = '#000'; ctx.fillRect(0,0,W,H);
+  const glow = {clean:'#0e7a58', known:'#4b33b8', deleg:'#9a4a00', bad:'#a3001f', err:'#4d4a66', contract:'#4d4a66'}[m.state] || '#3a3470';
+  const g = ctx.createRadialGradient(W/2, H*.55, 20, W/2, H*.55, W*.62); g.addColorStop(0, glow); g.addColorStop(1, 'rgba(0,0,0,0)');
+  ctx.globalAlpha = .8; ctx.fillStyle = g; ctx.fillRect(0,0,W,H); ctx.globalAlpha = 1;
+  ctx.textAlign = 'center'; ctx.lineJoin = 'round';
+  const drawCap = (text, y, fromBottom) => {
+    let size = 108; ctx.font = `${size}px Anton, Impact, sans-serif`;
+    let lines = wrapLines(ctx, text.toUpperCase(), W - 90);
+    while ((lines.length > 2 || lines.some(l => ctx.measureText(l).width > W - 90)) && size > 50){ size -= 6; ctx.font = `${size}px Anton, Impact, sans-serif`; lines = wrapLines(ctx, text.toUpperCase(), W - 90); }
+    ctx.lineWidth = size / 7; ctx.strokeStyle = '#000'; ctx.fillStyle = '#fff';
+    const lh = size * 1.02; const start = fromBottom ? y - (lines.length - 1) * lh : y;
+    lines.forEach((l, i) => { ctx.strokeText(l, W/2, start + i*lh); ctx.fillText(l, W/2, start + i*lh); });
+  };
+  ctx.textBaseline = 'top'; drawCap(m.top, 50, false);
+  ctx.textBaseline = 'alphabetic'; drawCap(m.bottom || '', H - 110, true);
+  ctx.font = '230px "Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif'; ctx.textBaseline = 'middle';
+  ctx.fillText(FACES[m.state] || '🤔', W/2, H*.52);
+  ctx.font = '600 30px "Bricolage Grotesque", sans-serif'; ctx.fillStyle = '#FFD84D'; ctx.textBaseline = 'alphabetic';
+  const sub = m.share && m.share.single ? short(m.share.addr) + ' on ' + chainsLabel(m.share.s.total) : '';
+  ctx.fillText([sub, siteUrl().replace(/^https?:\/\//,'')].filter(Boolean).join('   |   '), W/2, H - 34);
+  return await new Promise(r => cv.toBlob(r, 'image/png'));
+}
+$('#saveMeme').onclick = async () => {
+  const b = await memeBlob(); if (!b){ toast('Could not make the image'); return; }
+  const u = URL.createObjectURL(b); const a = document.createElement('a'); a.href = u; a.download = `7702-${current.state}.png`;
+  document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(u), 4000); toast('Meme saved');
+};
+$('#copyMeme').onclick = async () => {
+  try {
+    if (!window.ClipboardItem) throw new Error('unsupported');
+    await navigator.clipboard.write([new ClipboardItem({'image/png': memeBlob()})]); toast('Image copied');
+  } catch { toast('This browser can\'t copy images. Use Save meme.'); }
+};
+$('#copyLink').onclick = () => { const s = current.share; if (s && s.addr) copyText(siteUrl() + '?a=' + s.addr, 'Link copied'); };
+
 /* ---------------- Wallet ---------------- */
 const wallet = {provider:null, accounts:[], chainId:null, info:null};
 const discovered = []; // EIP-6963
@@ -482,33 +857,34 @@ window.dispatchEvent(new Event('eip6963:requestProvider'));
 
 function updateConnectBtn(){
   const b = $('#connectBtn');
-  if (wallet.accounts.length){ b.className='walletbtn'; b.innerHTML = `<span class="dot"></span>${esc(short(wallet.accounts[0]))}` + (wallet.accounts.length>1?` +${wallet.accounts.length-1}`:''); b.title='Click to disconnect'; }
-  else { b.className='primary walletbtn'; b.textContent='Connect wallet'; b.title=''; }
-  $('#walletRecheck').disabled = !wallet.accounts.length;
+  if (wallet.accounts.length){ b.innerHTML = `<span class="wallet-dot"></span>${esc(short(wallet.accounts[0]))}` + (wallet.accounts.length>1?` +${wallet.accounts.length-1}`:''); b.title='Disconnect'; }
+  else { b.textContent='Connect wallet'; b.title=''; }
 }
-function onAccounts(accs){
+function onAccounts(accs, opts={}){
   wallet.accounts = (accs||[]).filter(a=>/^0x[a-fA-F0-9]{40}$/.test(a));
   updateConnectBtn();
-  if (!wallet.accounts.length){ sets.wallet={addrs:[],data:{},stale:false,generation:sets.wallet.generation+1}; $('#walletBody').className='empty'; $('#walletBody').textContent='Wallet disconnected. Connect again to check it.'; return; }
-  if (!activeChains().length){ sets.wallet.stale=true; $('#netDetails').open=true; toast('Turn on at least one network'); scheduleRender(); return; }
-  runCheck('wallet', wallet.accounts);
+  if (!wallet.accounts.length){ sets.wallet = newSet(sets.wallet.generation + 1); if (focus === 'wallet') focus = sets.paste.addrs.length ? 'paste' : null; scheduleRender(); return; }
+  if (!activeChains().length){ sets.wallet.stale=true; focus='wallet'; $('#netDetails').open=true; toast('Turn on at least one network'); scheduleRender(); return; }
+  runCheck('wallet', wallet.accounts, undefined, opts);
+}
+function listen(p){
+  if (!p.on || p._7702) return; p._7702 = true;
+  p.on('accountsChanged', a => onAccounts(a));
+  p.on('chainChanged', id => { wallet.chainId = parseInt(id,16); scheduleRender(); });
 }
 async function useProvider(p, info){
   wallet.provider = p; wallet.info = info || null;
   try { wallet.chainId = parseInt(await p.request({method:'eth_chainId'}), 16); } catch {}
-  if (p.on){
-    p.on('accountsChanged', a => onAccounts(a));
-    p.on('chainChanged', id => { wallet.chainId = parseInt(id,16); scheduleRender(); });
-  }
+  listen(p);
   const accs = await p.request({method:'eth_requestAccounts'});
   try { localStorage.setItem(LS_KEY+'.connected', info?.rdns || 'injected'); } catch {}
   onAccounts(accs);
 }
 async function connect(){
-  if (wallet.accounts.length){ // "disconnect" (forget locally)
-    wallet.accounts=[]; try{ localStorage.removeItem(LS_KEY+'.connected'); }catch{}
+  if (wallet.accounts.length){
+    try{ localStorage.removeItem(LS_KEY+'.connected'); }catch{}
     try { await wallet.provider?.request?.({method:'wallet_revokePermissions', params:[{eth_accounts:{}}]}); } catch {}
-    onAccounts([]); return;
+    onAccounts([]); toast('Disconnected'); return;
   }
   const opts = discovered.length ? discovered : (window.ethereum ? [{info:{name:'Browser wallet', uuid:'injected'}, provider:window.ethereum}] : []);
   if (!opts.length){ showNoWallet(); return; }
@@ -522,22 +898,21 @@ async function connect(){
 }
 function showNoWallet(){
   const file = location.protocol === 'file:';
-  $('#envNotice').innerHTML = `<div class="notice warn"><b>No wallet found in this browser.</b> ${file
-    ? 'You opened this page as a local file, and most wallet extensions do not run on local files. Serve it instead, for example run <span class="mono">python3 -m http.server</span> in its folder and open <span class="mono">http://localhost:8000</span>, or upload it to any static host. You can still paste addresses below.'
-    : 'Install a wallet extension (MetaMask, Rabby, Coinbase Wallet…) or open this page inside your wallet app\'s browser. You can still paste addresses below.'}</div>`;
+  $('#envNotice').innerHTML = `<div class="notice" style="margin:0 0 18px"><b>No wallet found in this browser.</b> ${file
+    ? 'You opened this page as a local file, and most wallet extensions don\'t run on local files. Open the hosted page instead. You can still paste addresses.'
+    : 'Install a wallet extension (MetaMask, Rabby, Coinbase Wallet…) or open this page in your wallet app\'s browser. You can still paste addresses.'}</div>`;
 }
 async function silentReconnect(){
   let flag=null; try{ flag = localStorage.getItem(LS_KEY+'.connected'); }catch{}
   if (!flag) return;
-  await new Promise(r=>setTimeout(r,300)); // let EIP-6963 providers announce
+  await new Promise(r=>setTimeout(r,300));
   const o = discovered.find(d=>d.info.rdns===flag) || discovered[0] || (window.ethereum ? {provider:window.ethereum, info:null} : null);
   if (!o) return;
   try {
     const accs = await o.provider.request({method:'eth_accounts'});
     if (accs && accs.length){ wallet.provider=o.provider; wallet.info=o.info;
       try { wallet.chainId = parseInt(await o.provider.request({method:'eth_chainId'}),16); } catch {}
-      if (o.provider.on){ o.provider.on('accountsChanged', a=>onAccounts(a)); o.provider.on('chainChanged', id=>{ wallet.chainId=parseInt(id,16); scheduleRender(); }); }
-      onAccounts(accs); }
+      listen(o.provider); onAccounts(accs, {keepFocus:true}); }
   } catch {}
 }
 
@@ -546,16 +921,19 @@ function renderNets(){
   $('#testnetToggle').checked = !!settings.testnets;
   const list = DEFAULT_CHAINS.filter(c => !c.testnet || settings.testnets);
   $('#nets').innerHTML = list.map(c => `<div class="net">
-    <label><input type="checkbox" data-net="${c.id}" ${isEnabled(c)?'checked':''}> ${esc(c.name)} <span class="cid">· chain ${c.id}${c.testnet?' · testnet':''}</span></label>
-    <input type="text" data-rpc="${c.id}" value="${esc(chainRpcs(c).join(', '))}" spellcheck="false">
+    <label><input type="checkbox" data-net="${c.id}" ${isEnabled(c)?'checked':''}> ${esc(c.name)} <span class="cid">chain ${c.id}${c.testnet?', testnet':''}</span></label>
+    <input type="text" data-rpc="${c.id}" value="${esc(chainRpcs(c).join(', '))}" spellcheck="false" aria-label="${esc(c.name)} RPC URLs">
   </div>`).join('');
-  $('#netSummary').textContent = `Checks ${activeChains().length} chains: ${activeChains().map(c=>c.short).join(', ')}`;
+  const act = activeChains();
+  $('#netSummary').textContent = `Checks ${chainsLabel(act.length)}: ${act.map(c=>c.short).join(', ')}`;
+  $('#chainCountLede').textContent = chainsLabel(act.length);
 }
 function invalidateChecks(){
+  delegateInfoCache.clear();
   if (sets.wallet.addrs.length) sets.wallet.stale=true;
   if (sets.paste.addrs.length) sets.paste.stale=true;
   scheduleRender();
-  if (wallet.accounts.length && activeChains().length) runCheck('wallet', wallet.accounts);
+  if (wallet.accounts.length && activeChains().length) runCheck('wallet', wallet.accounts, undefined, {keepFocus:true});
 }
 $('#nets').addEventListener('change', e => {
   const t = e.target;
@@ -567,21 +945,24 @@ $('#nets').addEventListener('change', e => {
 $('#testnetToggle').onchange = e => { settings.testnets = e.target.checked; save(); renderNets(); invalidateChecks(); };
 $('#allOn').onclick = () => { DEFAULT_CHAINS.forEach(c => { if (!c.testnet || settings.testnets) settings.enabled[c.id]=true; }); save(); renderNets(); invalidateChecks(); };
 $('#allOff').onclick = () => { DEFAULT_CHAINS.forEach(c => settings.enabled[c.id]=false); save(); renderNets(); invalidateChecks(); };
-$('#resetNets').onclick = () => { settings = {enabled:{}, rpcs:{}, testnets:false}; for (const k in chainState) delete chainState[k]; save(); renderNets(); invalidateChecks(); toast('Reset'); };
+$('#resetNets').onclick = () => { const meme = settings.meme; settings = {enabled:{}, rpcs:{}, testnets:false, meme}; for (const k in chainState) delete chainState[k]; save(); renderNets(); invalidateChecks(); toast('Reset'); };
 
 /* ---------------- Events ---------------- */
 const input = $('#addrInput');
-function updateCount(){ const n = parseAddresses(input.value).length; const p=$('#foundCount'); p.textContent = `${n} address${n===1?'':'es'} · max ${MAX_ADDRESSES}`; p.className = 'pill ' + (n?'info':'grey'); }
+function updateCount(){ const n = parseAddresses(input.value).length; const p=$('#foundCount'); p.textContent = `${plural(n, 'address', 'addresses')} · max ${MAX_ADDRESSES}`; p.classList.toggle('has', n > 0); }
 input.addEventListener('input', updateCount);
-$('#checkBtn').onclick = async () => {
+async function checkPasted(){
   const addrs = parseAddresses(input.value);
   if (!addrs.length){ toast('No valid 0x addresses found'); input.focus(); return; }
   if (addrs.length > MAX_ADDRESSES){ toast(`Check up to ${MAX_ADDRESSES} addresses at a time`); return; }
   if (!activeChains().length){ toast('Turn on at least one network'); $('#netDetails').open=true; return; }
   const b=$('#checkBtn'); b.disabled=true; b.textContent='Checking…';
+  if (window.innerWidth < 860) $('.meme-wrap').scrollIntoView({behavior: reduceMotion() ? 'auto' : 'smooth', block:'start'});
   try { await runCheck('paste', addrs); } finally { b.disabled=false; b.textContent='Check addresses'; }
-};
-$('#clearBtn').onclick = () => { input.value=''; updateCount(); sets.paste={addrs:[],data:{},stale:false,generation:sets.paste.generation+1}; renderPaste(); };
+}
+$('#checkBtn').onclick = checkPasted;
+input.addEventListener('keydown', e => { if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) checkPasted(); });
+$('#clearBtn').onclick = () => { input.value=''; updateCount(); sets.paste = newSet(sets.paste.generation + 1); progress = {done:0,total:0}; if (focus === 'paste') focus = wallet.accounts.length ? 'wallet' : null; scheduleRender(); };
 $('#walletRecheck').onclick = () => { if (!activeChains().length){ toast('Turn on at least one network'); $('#netDetails').open=true; return; } if (wallet.accounts.length) runCheck('wallet', wallet.accounts); };
 $('#retryErr').onclick = () => {
   if (!activeChains().length){ toast('Turn on at least one network'); $('#netDetails').open=true; return; }
@@ -593,16 +974,22 @@ $('#copyCsv').onclick = () => {
   const lines = ['address,chain,chain_id,status,delegate,label'];
   for (const a of sets.paste.addrs){ const row = sets.paste.data[a.toLowerCase()]||{};
     for (const [id,v] of orderedEntries(row)){ const c=chainById(id);
-      const status = {clean:'no_delegation_observed',known:'delegated_verified_familiar',deleg:'delegated_unverified',bad:'delegated_verified_reported_malicious',contract:'contract',err:'error',loading:'pending'}[v.status];
+      const status = {clean:'no_delegation_observed',known:'delegated_verified_familiar',deleg:'delegated_unverified',bad:'delegated_reported_sweeper',contract:'contract',err:'error',loading:'pending'}[v.status];
       lines.push([a, c.name, id, status, v.delegate||'', (v.label||v.error||'').replace(/,/g,';')].join(',')); } }
-  copyText(lines.join('\n'));
+  copyText(lines.join('\n'), 'CSV copied');
 };
-document.addEventListener('click', e => { const c = e.target.closest('[data-copy]'); if (c) copyText(c.dataset.copy); });
+document.addEventListener('click', e => { const c = e.target.closest('[data-copy]'); if (c) copyText(c.dataset.copy, 'Address copied'); });
 $('#connectBtn').onclick = connect;
 $('#closeModal').onclick = () => $('#walletModal').classList.remove('on');
 $('#walletModal').onclick = e => { if (e.target.id==='walletModal') e.target.classList.remove('on'); };
+$('#memeToggle').checked = settings.meme !== false;
+$('#memeToggle').onchange = e => { settings.meme = e.target.checked; save(); lastFinal.wallet = lastFinal.paste = null; scheduleRender(); };
 
-renderNets(); updateCount(); silentReconnect();
+renderNets(); updateCount(); renderMeme(); silentReconnect();
+
+// Shared links: ?a=0x...,0x... prefills and checks
+const qs = new URLSearchParams(location.search).get('a');
+if (qs){ const found = parseAddresses(qs); if (found.length){ input.value = found.join('\n'); updateCount(); checkPasted(); } }
 })();
 </script>
 </body>
